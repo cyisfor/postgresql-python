@@ -26,13 +26,13 @@ def maybeTimestamp(result):
         if result[4] != '-' and result[7] != '-' and result[10] != ' ' and result[12] != ':' and result[15] != ':':
             return result
         second = None
+        day = None
         try:
             year = int(result[:4])
             month = int(result[5:7])
             day = int(result[8:10])
             toffset = 11
         except ValueError:
-            year = None
             toffset = 0
         try:
             hour = int(result[toffset:toffset+2])
@@ -57,14 +57,16 @@ def maybeTimestamp(result):
                         zone = -zone
         except ValueError:
             zone = None
-        if zone is not None:
-            # make sure it's UTC...
-            hour += zone
-            return datetime.datetime(year,month,day,hour,minute,second,microsecond)
-        elif second is None:
-            return datetime.date(year,month,day)
-        else:
+        if day is None:
+            if second is None: return result
             return datetime.time(hour,minute,second)
+        else:
+            if second is None:
+                return datetime.date(year,month,day)
+            else:
+                # make sure it's UTC...
+                hour += zone
+                return datetime.datetime(year,month,day,hour,minute,second,microsecond)
     except ValueError: pass
     except IndexError: pass
     return result
