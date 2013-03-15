@@ -1,6 +1,7 @@
-from connection import Connection
+from .connection import Connection
 
 from contextlib import contextmanager
+from itertools import count
 
 @contextmanager
 def transaction(connection):
@@ -16,7 +17,7 @@ savectr = count(0)
 
 @contextmanager
 def saved(connection):
-    name = "savepoint{}".format(savectr.__next__()))
+    name = "savepoint{}".format(savectr.__next__())
     connection.execute("SAVE "+name)
     try:
         yield connection

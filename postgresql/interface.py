@@ -20,11 +20,13 @@ resultStatus = lib.PQresultStatus
 resStatus = lib.PQresStatus
 resStatus.restype = ctypes.c_char_p
 def escapeThing(escaper):
-    def run(conn,s,len):
+    escaper.restype = ctypes.c_void_p
+    def run(conn,s):
         result = escaper(conn,s,len(s))
         ret = ctypes.string_at(result)
-        free(result)
-        return ret
+        print("boop",ret)
+        lib.PQfreemem(result)
+        return ret.decode('utf-8')
     return run
 escapeLiteral = escapeThing(lib.PQescapeLiteral)
 escapeIdentifier = escapeThing(lib.PQescapeIdentifier)
@@ -47,4 +49,4 @@ getvalue.restype = ctypes.c_char_p
 getCopyData = lib.PQgetCopyData
 putCopyData = lib.PQputCopyData
 putCopyEnd = lib.PQputCopyEnd
-from suckenums import *
+from .suckenums import *

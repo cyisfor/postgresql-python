@@ -1,4 +1,4 @@
-import interface
+from . import interface
 from itertools import count
 import datetime
 
@@ -155,12 +155,12 @@ class Connection:
         interface.setErrorVerbosity(self.raw,interface.PQERRORS_VERBOSE)
         self.executedBefore = set()
     def mogrify(self,i):
-        if isinstance(i,int) or isinstance(i,long) or isinstance(i,float):
+        if isinstance(i,int) or isinstance(i,float):
             return str(i)
         elif isinstance(i,bytes):
-            return interface.escapeLiteral(i)
+            return i.decode('utf-8')
         elif isinstance(i,str):
-            return interface.escapeLiteral(i.encode('utf-8'))
+            return i
         elif hasattr(i,'asPostgreSQL'):
             return i.asPostgreSQL(self)
         elif isinstance(i,datetime.datetime) or isinstance(i,datetime.date) or isinstance(i,datetime.time):
