@@ -46,6 +46,7 @@ ntuples = lib.PQntuples
 getlength = lib.PQgetlength
 getvalue = lib.PQgetvalue
 getvalue.restype = ctypes.c_char_p
+getisnull = lib.PQgetisnull
 getCopyData = lib.PQgetCopyData
 putCopyData = lib.PQputCopyData
 putCopyEnd = lib.PQputCopyEnd

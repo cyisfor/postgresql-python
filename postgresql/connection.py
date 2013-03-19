@@ -246,10 +246,10 @@ class Connection:
                 0)
         self.status = interface.resultStatus(result)
         if 'TO' in stmt:
-            return self.copyIn()
+            return self.copyIn(stmt)
         else:
             return self.copyOut(source)
-    def copyIn(self):
+    def copyIn(self,stmt):
         while True:
             buf = ctypes.c_char_p(None)
             code = interface.getCopyData(self.raw,ctypes.byref(buf),0)
