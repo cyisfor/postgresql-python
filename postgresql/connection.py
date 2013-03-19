@@ -1,15 +1,15 @@
-from . import interface
+from . import interface,arrayparser
 from itertools import count
 import datetime
 
 class Prepared(str): pass
 
 class SQLError(IOError):
-    def __init__(self,info):
+    def __init__(self,stmt,info):
+        self.stmt = stmt
         self.info = info
     def __str__(self):
-
-        return ' '.join((k+'='+str(v) for k,v in self.info.items()))
+        return self.stmt+'\n'+' '.join((k+'='+str(v) for k,v in self.info.items()))
     def __repr__(self):
         return 'SQLError('+repr(self.info)+')'
 
@@ -73,7 +73,7 @@ def maybeTimestamp(result):
 
 class Result(list):
     error = None
-    def __init__(self,rawconn,raw):
+    def __init__(self,rawconn,raw,stmt):
         # no reason to leave the result sitting around in C structures now?
         self.statusId = interface.resultStatus(raw)
         resStatus = interface.resStatus(self.statusId)
@@ -107,23 +107,28 @@ class Result(list):
             import sys
             sys.stdout.write(error['message'].decode('utf-8'))
             if self.statusId != interface.PGRES_NONFATAL_ERROR:
-                raise SQLError(error)
+                raise SQLError(stmt,error)
             else:
                 self.error = error
         self.fields = []
         for c in range(interface.nfields(raw)):
-            self.fields.append(ctypes.string_at(interface.fname(raw,c)))
-        print(self.fields,interface.ntuples(raw))
+            self.fields.append(ctypes.string_at(interface.fname(raw,c)).decode('utf-8'))
         for r in range(interface.ntuples(raw)):
             row = list()
             for c in range(interface.nfields(raw)):
                 length = interface.getlength(raw,r,c)
-                rawval = interface.getvalue(raw,r,c)
-                val = self.demogrify(rawval)
+                if interface.getisnull(raw,r,c):
+                    val = None
+                else:
+                    rawval = interface.getvalue(raw,r,c)
+                    val = self.demogrify(rawval)
                 row.append(val)
             self.append(row)
         interface.clear(raw)
     def demogrify(self,result):
+        if not result: return ''
+        if result[0] == ord('{') and len(result)>1 and result[-1]==ord('}'):
+            return arrayparser.decode(result)
         try: return int(result)
         except ValueError: pass
         result = result.decode('utf-8')
@@ -209,9 +214,10 @@ class Connection:
                         fmt,
                         0);
                 self.status = interface.resultStatus(result)
-                self.result = Result(self.raw,result)
+                self.result = Result(self.raw,result,fullstmt)
                 self.executedBefore.add(stmt)
                 return self.result
+
         result = interface.execute(self.raw,
                 stmt.encode('utf-8'),
                 len(args),
@@ -220,7 +226,7 @@ class Connection:
                 [1]*len(args),
                 1);
         self.status = interface.resultStatus(result)
-        self.result = Result(result)
+        self.result = Result(self,result,fullstmt)
         return self.result
     def copy(self,stmt,source=None):
         result = interface.executeOnce(self.raw,
@@ -245,7 +251,7 @@ class Connection:
             elif code == -2:
                 message = interface.connectionErrorMessage(self.raw).decode('utf-8')
                 print(message)
-                raise SQLError(message)
+                raise SQLError(message,stmt)
             else:
                 yield ctypes.string_at(buf).decode('utf-8')
     def copyOut(self,source):
