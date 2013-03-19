@@ -18,8 +18,9 @@ savectr = count(0)
 @contextmanager
 def saved(connection):
     name = "savepoint{}".format(savectr.__next__())
-    connection.execute("SAVE "+name)
+    connection.execute("SAVEPOINT "+name)
     try:
         yield connection
     except:
         connection.execute("ROLLBACK TO "+name)
+        raise
