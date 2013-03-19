@@ -137,11 +137,17 @@ class Result(list):
 stmtcounter = count(0)
 
 def anonstatement():
-    return 'anonstatement{}'.format(stmtcounter.next())
+    return 'anonstatement{}'.format(stmtcounter.__next__())
 
 import ctypes
 def cstrize(s):
     return ctypes.c_char_p(s.encode('utf-8'))
+
+def makederp(typ,args):
+    if not args: return None
+    typ *= len(args)
+    val = typ(*args)
+    return val
 
 class Connection:
     def __init__(self,**params):
@@ -174,37 +180,38 @@ class Connection:
             return i.asPostgreSQL(self)
         elif isinstance(i,datetime.datetime) or isinstance(i,datetime.date) or isinstance(i,datetime.time):
             return i.isoformat()
-        elif isinstance(i,list) or isinstance(i,tuple):
+        elif isinstance(i,list) or isinstance(i,tuple) or isinstance(i,set):
             return '{'+','.join(self.mogrify(ii) for ii in i)+'}'
-        elif hasattr(i,__next__):
+        elif hasattr(i,'__next__'):
             return self.mogrify(tuple(i))
         else:
             raise RuntimeError("Don't know how to mogrify type {}".format(type(i)))
     def encode(self,i):
         return self.mogrify(i).encode('utf-8')
     def execute(self,stmt,args=()):
+        if isinstance(args,dict):
+            # just figured out a neat trick to let %(named)s parameters
+            keys = args.keys()
+            subs = dict(zip(keys,['$'+str(i) for i in range(1,1+len(keys))]))
+            stmt = stmt % subs
+            args = [args[key] for key in keys]
+            # badda boom
         args = [self.encode(arg) for arg in args]
+        values = makederp(ctypes.c_char_p,args)
+        lengths = makederp(ctypes.c_int,[len(arg) for arg in args])
+        fmt = makederp(ctypes.c_int,(0,)*len(args))
+        fullstmt = stmt
         if not isinstance(stmt,Prepared):
+            types = makederp(ctypes.c_void_p,(None,)*len(args))
             if stmt in self.executedBefore:
                 name = anonstatement()
                 result = interface.prepare(self.raw,
+                        name.encode('utf-8'),
                         stmt.encode('utf-8'),
-                        len(args),name.encode()
-                        (ctypes.c_int_p * len(args))((None,) * len(args)))
+                        len(args),
+                        types)
                 stmt = Prepared(name)
             else:
-                if args:
-                    types = (ctypes.c_char_p * len(args))(*(None,) * len(args))
-                    values = (ctypes.c_char_p * len(args))(*args)
-                    lengths = (ctypes.c_int * len(args))(*[len(arg) for arg in args])
-                    fmt = (ctypes.c_int * len(args))(*(0,) * len(args))
-
-                    types = ctypes.cast(types,ctypes.c_void_p)
-                    values = ctypes.cast(values,ctypes.c_void_p)
-                    lengths = ctypes.cast(lengths,ctypes.c_void_p)
-                    fmt = ctypes.cast(fmt,ctypes.c_void_p)
-                else:
-                    types = values = lengths = args = fmt = None
                 result = interface.executeOnce(self.raw,
                         stmt.encode('utf-8'),
                         len(args) if args else 0,
@@ -221,10 +228,10 @@ class Connection:
         result = interface.execute(self.raw,
                 stmt.encode('utf-8'),
                 len(args),
-                args,
-                [len(i) for i in args],
-                [1]*len(args),
-                1);
+                values,
+                lengths,
+                fmt,
+                0)
         self.status = interface.resultStatus(result)
         self.result = Result(self,result,fullstmt)
         return self.result
