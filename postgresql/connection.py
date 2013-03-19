@@ -157,6 +157,8 @@ class Connection:
         interface.setErrorVerbosity(self.raw,interface.PQERRORS_VERBOSE)
         self.executedBefore = set()
     def mogrify(self,i):
+        if i is None:
+            return 'NULL'
         if isinstance(i,int) or isinstance(i,float):
             return str(i)
         elif isinstance(i,bytes):
