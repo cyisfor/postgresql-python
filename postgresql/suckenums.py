@@ -5,7 +5,7 @@ import sys
 
 enums = {}
 
-pid = subprocess.Popen(["pg_config92","--includedir"],stdout=subprocess.PIPE)
+pid = subprocess.Popen(["pg_config","--includedir"],stdout=subprocess.PIPE)
 place = pid.stdout.read().rstrip()
 pid.wait()
 pid = subprocess.Popen(["cpp","-I",place],stdin=subprocess.PIPE,stdout=subprocess.PIPE)
