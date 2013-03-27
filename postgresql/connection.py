@@ -2,6 +2,8 @@ from . import interface,arrayparser
 from itertools import count
 import datetime
 
+import threading
+
 class Prepared(str): pass
 
 class SQLError(IOError):
@@ -149,6 +151,9 @@ def makederp(typ,args):
     val = typ(*args)
     return val
 
+class LocalConn(threading.local):
+    raw = None
+
 class Connection:
     def __init__(self,**params):
         if 'params' in params:
@@ -164,9 +169,14 @@ class Connection:
             vala[i] = cstrize(str(val))
         keya[height] = None
         vala[height] = None
-        self.raw = interface.connect(keya,vala,1)
-        interface.setErrorVerbosity(self.raw,interface.PQERRORS_VERBOSE)
+        self.conninfo = (keya,vala,1)
+        self.safe = LocalConn()
         self.executedBefore = set()
+    def connect(self):
+        if self.safe.raw is None:
+            self.safe.raw = interface.connect(*self.conninfo)
+            interface.setErrorVerbosity(self.safe.raw,interface.PQERRORS_VERBOSE)
+        return self.safe.raw
     def mogrify(self,i):
         if i is None:
             return 'NULL'
@@ -189,9 +199,13 @@ class Connection:
     def encode(self,i):
         return self.mogrify(i).encode('utf-8')
     def execute(self,stmt,args=()):
+        raw = self.connect()
         if isinstance(args,dict):
             # just figured out a neat trick to let %(named)s parameters
             keys = args.keys()
+            for key in keys:
+                if not '%('+key+')' in stmt:
+                    raise SQLError(stmt,{'message': "Named args must all be in the statement! Missing "+key})
             subs = dict(zip(keys,['$'+str(i) for i in range(1,1+len(keys))]))
             stmt = stmt % subs
             args = [args[key] for key in keys]
@@ -205,14 +219,14 @@ class Connection:
             types = makederp(ctypes.c_void_p,(None,)*len(args))
             if stmt in self.executedBefore:
                 name = anonstatement()
-                result = interface.prepare(self.raw,
+                result = interface.prepare(raw,
                         name.encode('utf-8'),
                         stmt.encode('utf-8'),
                         len(args),
                         types)
                 stmt = Prepared(name)
             else:
-                result = interface.executeOnce(self.raw,
+                result = interface.executeOnce(raw,
                         stmt.encode('utf-8'),
                         len(args) if args else 0,
                         types,
@@ -221,11 +235,11 @@ class Connection:
                         fmt,
                         0);
                 self.status = interface.resultStatus(result)
-                self.result = Result(self.raw,result,fullstmt)
+                self.result = Result(raw,result,fullstmt)
                 self.executedBefore.add(stmt)
                 return self.result
 
-        result = interface.execute(self.raw,
+        result = interface.execute(raw,
                 stmt.encode('utf-8'),
                 len(args),
                 values,
@@ -236,7 +250,8 @@ class Connection:
         self.result = Result(self,result,fullstmt)
         return self.result
     def copy(self,stmt,source=None):
-        result = interface.executeOnce(self.raw,
+        raw = self.connect()
+        result = interface.executeOnce(raw,
                 stmt.encode('utf-8'),
                 0,
                 None,
@@ -246,30 +261,30 @@ class Connection:
                 0)
         self.status = interface.resultStatus(result)
         if 'TO' in stmt:
-            return self.copyIn(stmt)
+            return self.copyIn(stmt,raw)
         else:
-            return self.copyOut(source)
-    def copyIn(self,stmt):
+            return self.copyOut(source,raw)
+    def copyIn(self,stmt,raw):
         while True:
             buf = ctypes.c_char_p(None)
-            code = interface.getCopyData(self.raw,ctypes.byref(buf),0)
+            code = interface.getCopyData(raw,ctypes.byref(buf),0)
             if code == -1:
                 return
             elif code == -2:
-                message = interface.connectionErrorMessage(self.raw).decode('utf-8')
+                message = interface.connectionErrorMessage(raw).decode('utf-8')
                 print(message)
                 raise SQLError(message,stmt)
             else:
                 yield ctypes.string_at(buf).decode('utf-8')
-    def copyOut(self,source):
+    def copyOut(self,source,raw):
         try:
             while True:
                 buf = source.read(0x1000)
                 if not buf: break
                 if isinstance(buf,str):
                     buf = buf.encode('utf-8')
-                interface.putCopyData(self.raw,buf,len(buf))
+                interface.putCopyData(raw,buf,len(buf))
         except Exception as e:
-            interface.putCopyEnd(self.raw,str(e).encode('utf-8'))
+            interface.putCopyEnd(raw,str(e).encode('utf-8'))
             raise
-        interface.putCopyEnd(self.raw,None)
+        interface.putCopyEnd(raw,None)
