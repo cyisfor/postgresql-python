@@ -1,6 +1,8 @@
 from . import interface,arrayparser
-from itertools import count
+from itertools import count,islice
 import datetime
+import traceback
+import time
 
 import threading
 
@@ -197,7 +199,10 @@ class Connection:
         elif isinstance(i,list) or isinstance(i,tuple) or isinstance(i,set):
             return '{'+','.join(self.mogrify(ii) for ii in i)+'}'
         elif hasattr(i,'__next__'):
-            return self.mogrify(tuple(i))
+            # XXX: infinite iterators hang + 100% CPU + 100% disk usage + no ^C etc
+            # and we can't check for them because Halting Problem
+            # so... 1000 is a good enough maximum size right?
+            return self.mogrify(tuple(islice(i,1000)))
         else:
             raise RuntimeError("Don't know how to mogrify type {}".format(type(i)))
     def encode(self,i):
