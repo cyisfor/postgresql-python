@@ -34,4 +34,5 @@ def decodeArray(v):
 
 def decode(v):
     assert(v[0]==leftBrace)
+    if v == b'{NULL}': return ()
     return decodeArray(v[1:])
