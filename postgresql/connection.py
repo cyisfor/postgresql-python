@@ -155,6 +155,10 @@ class LocalConn(threading.local):
     raw = None
 
 class Connection:
+    inTransaction = False
+    savePoint = None
+    verbose = False
+    out = None
     def __init__(self,**params):
         if 'params' in params:
             params.update(params['params'])

@@ -24,7 +24,6 @@ def escapeThing(escaper):
     def run(conn,s):
         result = escaper(conn,s,len(s))
         ret = ctypes.string_at(result)
-        print("boop",ret)
         lib.PQfreemem(result)
         return ret.decode('utf-8')
     return run
