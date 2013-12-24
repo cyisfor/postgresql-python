@@ -230,16 +230,24 @@ class Connection:
         lengths = makederp(ctypes.c_int,[len(arg) for arg in args])
         fmt = makederp(ctypes.c_int,(0,)*len(args))
         fullstmt = stmt
-        if not isinstance(stmt,Prepared):
+        if self.verbose:
+            import sys,time
+            out = self.out if self.out else sys.stdout
+            out.write(str(time.time())+' '+fullstmt)
+            print(':',args,file=out)
+            out.flush()
+        name = self.prepareds.get(stmt)
+        if name is None:
             types = makederp(ctypes.c_void_p,(None,)*len(args))
-            if stmt in self.executedBefore:
+            if not stmt in self.executedBefore:
                 name = anonstatement()
                 result = interface.prepare(raw,
                         name.encode('utf-8'),
                         stmt.encode('utf-8'),
                         len(args),
                         types)
-                stmt = Prepared(name)
+                Result(self,raw,result,fullstmt) # needed to catch/format errors
+                self.prepareds[stmt] = Prepared(name)
             else:
                 result = interface.executeOnce(raw,
                         stmt.encode('utf-8'),
@@ -250,19 +258,20 @@ class Connection:
                         fmt,
                         0);
                 self.status = interface.resultStatus(result)
-                self.result = Result(raw,result,fullstmt)
-                self.executedBefore.add(stmt)
+                self.result = Result(self,raw,result,fullstmt)
+                if len(stmt) > 14:
+                    self.executedBefore.add(stmt)
                 return self.result
 
         result = interface.execute(raw,
-                stmt.encode('utf-8'),
+                name.encode('utf-8'),
                 len(args),
                 values,
                 lengths,
                 fmt,
                 0)
         self.status = interface.resultStatus(result)
-        self.result = Result(self,result,fullstmt)
+        self.result = Result(self,raw,result,fullstmt)
         return self.result
     def copy(self,stmt,source=None):
         raw = self.connect()

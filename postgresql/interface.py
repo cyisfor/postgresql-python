@@ -13,10 +13,12 @@ reset = lib.PQreset
 ping = lib.PQping
 execute = lib.PQexecPrepared
 executeOnce = lib.PQexecParams
-class result(ctypes.c_void_p): pass
-execute.restype = executeOnce.restype = result
 prepare = lib.PQprepare
+class result(ctypes.c_void_p): pass
+execute.restype = executeOnce.restype = prepare.restype = result
 resultStatus = lib.PQresultStatus
+tuplesUpdated = lib.PQcmdTuples
+tuplesUpdated.restype = ctypes.c_char_p
 resStatus = lib.PQresStatus
 resStatus.restype = ctypes.c_char_p
 def escapeThing(escaper):
