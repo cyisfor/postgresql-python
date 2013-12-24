@@ -13,7 +13,7 @@ class SQLError(IOError):
         self.stmt = stmt
         self.info = info
     def __str__(self):
-        return self.stmt+'\n'+' '.join((k+'='+str(v) for k,v in self.info.items()))
+        return self.stmt+'\n\n'+'\n'.join((k+'='+str(v) for k,v in self.info.items()))
     def __repr__(self):
         return 'SQLError('+repr(self.info)+')'
 
@@ -77,14 +77,15 @@ def maybeTimestamp(result):
 
 class Result(list):
     error = None
-    def __init__(self,rawconn,raw,stmt):
+    tuplesUpdated = None
+    status = None
+    def __init__(self,conn,rawconn,raw,stmt):
         # no reason to leave the result sitting around in C structures now?
+        self.decode = conn.decode
         self.statusId = interface.resultStatus(raw)
         resStatus = interface.resStatus(self.statusId)
         if resStatus:
             self.status = resStatus
-        else:
-            self.status = None
         if self.statusId not in OKstatuses:
             error = {}
             for k,v in (('message',interface.errorMessage(raw)),
@@ -108,15 +109,17 @@ class Result(list):
                         'name': function,
                         }
             interface.clear(raw)
-            import sys
-            sys.stdout.write(error['message'].decode('utf-8'))
             if self.statusId != interface.PGRES_NONFATAL_ERROR:
                 raise SQLError(stmt,error)
             else:
                 self.error = error
+        else:
+            self.tuplesUpdated = interface.tuplesUpdated(raw)
+            if self.tuplesUpdated:
+                self.tuplesUpdated = int(self.tuplesUpdated)
         self.fields = []
         for c in range(interface.nfields(raw)):
-            self.fields.append(ctypes.string_at(interface.fname(raw,c)).decode('utf-8'))
+            self.fields.append(self.decode(ctypes.string_at(interface.fname(raw,c))))
         for r in range(interface.ntuples(raw)):
             row = list()
             for c in range(interface.nfields(raw)):
@@ -135,7 +138,7 @@ class Result(list):
             return arrayparser.decode(result)
         try: return int(result)
         except ValueError: pass
-        result = result.decode('utf-8')
+        result = self.decode(result)
         return maybeTimestamp(result)
 
 stmtcounter = count(0)
@@ -178,6 +181,9 @@ class Connection:
         self.conninfo = (keya,vala,1)
         self.safe = LocalConn()
         self.executedBefore = set()
+        self.prepareds = dict()
+    def decode(self,b):
+        return b.decode('utf-8',errors='replace')
     def connect(self):
         if self.safe.raw is None:
             self.safe.raw = interface.connect(*self.conninfo)
@@ -189,7 +195,7 @@ class Connection:
         if isinstance(i,int) or isinstance(i,float):
             return str(i)
         elif isinstance(i,bytes):
-            return i.decode('utf-8')
+            return self.decode(i)
         elif isinstance(i,str):
             return i
         elif hasattr(i,'asPostgreSQL'):
@@ -280,11 +286,14 @@ class Connection:
             if code == -1:
                 return
             elif code == -2:
-                message = interface.connectionErrorMessage(raw).decode('utf-8')
-                print(message)
+                message = self.decode(interface.connectionErrorMessage(raw))
+                if self.verbose:
+                    out = self.out if self.out else sys.stdout
+                    print(message,file=out)
+                    out.flush()
                 raise SQLError(message,stmt)
             else:
-                yield ctypes.string_at(buf).decode('utf-8')
+                yield self.decode(ctypes.string_at(buf))
     def copyOut(self,source,raw):
         try:
             while True:
