@@ -190,7 +190,9 @@ class Connection:
         if self.specialDecoders: return
         self.specialDecoders = {}
         for oid in self.getOIDs(raw,'N'):
-            self.specialDecoders[int(oid)] = self.decodeNumber
+            self.specialDecoders[oid] = self.decodeNumber
+        for oid in self.getOIDs(raw,'B'):
+            self.specialDecoders[oid] = self.decodeBoolean
         for oid in self.getOIDs(raw,'D'):
             self.specialDecoders[oid] = self.decodeDate
         self.stringOIDs = set(self.getOIDs(raw,'S'))
@@ -211,6 +213,8 @@ class Connection:
         return parseNumber(self.decode(s))
     def decodeDate(self, s):
         return parseDate(self.decode(s))
+    def decodeBoolean(self, b):
+        return b == b't'
     def makeParseArray(self,subtype):
         if subtype in self.stringOIDs:
             decoder = self.decodeString
