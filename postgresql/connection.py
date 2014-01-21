@@ -195,7 +195,6 @@ class Connection:
         for oid in self.stringOIDs:
             self.specialDecoders[oid] = self.decode
         for oid,subtype in self.executeRaw(raw,"SELECT typarray,oid FROM pg_type WHERE typarray > 0"):
-            print(oid,'array for',subtype)
             parser = self.makeParseArray(subtype)
             if parser:
                 self.specialDecoders[oid] = parser
@@ -214,14 +213,11 @@ class Connection:
             decoder = self.decodeString
         else:
             decoder = self.specialDecoders.get(subtype)
-        if not decoder:
-            print('no leaf decoder for ',subtype)
-        else:
+        if decoder:
             return lambda result: arrayparser.decode(result,decoder)
     def decode(self,b):
         return b.decode('utf-8',errors='replace')
     def demogrify(self,result,typ):
-        print('demogrifying',typ,self.specialDecoders.get(typ))
         decoder = self.specialDecoders.get(typ)
         if decoder:
             return decoder(result)
