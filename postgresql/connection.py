@@ -25,7 +25,7 @@ OKstatuses = set((
     interface.PGRES_COPY_BOTH,
     interface.PGRES_SINGLE_TUPLE))
 
-def maybeTimestamp(result):
+def parseDate(result):
     try:
         if result[4] != '-' and result[7] != '-' and result[10] != ' ' and result[12] != ':' and result[15] != ':':
             return result
@@ -75,6 +75,11 @@ def maybeTimestamp(result):
     except IndexError: pass
     return result
 
+def parseNumber(result):
+    if '.' in result:
+        return float(result)
+    return int(result)
+
 class Result(list):
     error = None
     tuplesUpdated = None
@@ -82,6 +87,7 @@ class Result(list):
     def __init__(self,conn,rawconn,raw,stmt):
         # no reason to leave the result sitting around in C structures now?
         self.decode = conn.decode
+        self.demogrify = conn.demogrify
         self.statusId = interface.resultStatus(raw)
         resStatus = interface.resStatus(self.statusId)
         if resStatus:
@@ -118,28 +124,22 @@ class Result(list):
             if self.tuplesUpdated:
                 self.tuplesUpdated = int(self.tuplesUpdated)
         self.fields = []
+        self.types = []
         for c in range(interface.nfields(raw)):
             self.fields.append(self.decode(ctypes.string_at(interface.fname(raw,c))))
+            self.types.append(int(interface.ftype(raw,c)))
         for r in range(interface.ntuples(raw)):
             row = list()
             for c in range(interface.nfields(raw)):
-                length = interface.getlength(raw,r,c)
                 if interface.getisnull(raw,r,c):
                     val = None
                 else:
+                    length = interface.getlength(raw,r,c)
                     rawval = interface.getvalue(raw,r,c)
-                    val = self.demogrify(rawval)
+                    val = self.demogrify(rawval,self.types[c])
                 row.append(val)
             self.append(row)
         interface.clear(raw)
-    def demogrify(self,result):
-        if not result: return ''
-        if result[0] == ord('{') and len(result)>1 and result[-1]==ord('}'):
-            return arrayparser.decode(result)
-        try: return int(result)
-        except ValueError: pass
-        result = self.decode(result)
-        return maybeTimestamp(result)
 
 stmtcounter = count(0)
 
@@ -182,12 +182,44 @@ class Connection:
         self.safe = LocalConn()
         self.executedBefore = set()
         self.prepareds = dict()
+    specialDecoders = None
+    stringOIDs = ()
+    def setup(self,raw):
+        if self.specialDecoders: return
+        self.specialDecoders = {}
+        for oid in self.getOIDs(raw,'D'):
+            self.specialDecoders[oid] = self.decodeDate
+        for oid,subtype in self.executeRaw(raw,"SELECT typarray,oid FROM pg_type WHERE typcategory = $1",('A',)):
+            self.specialDecoders[oid] = self.makeParseArray(subtype)
+        for oid in self.getOIDs(raw,'N'):
+            self.specialDecoders[oid] = self.decodeNumber
+        self.stringOIDs = set(self.getOIDs(raw,'S'))
+    def getOIDs(self,raw,category):
+        return (int(row[0]) for row in self.executeRaw(raw,"SELECT oid FROM pg_type WHERE typcategory = $1",(category,)))
+    def decodeString(self, s):
+        return self.decode(s[1:-1])
+    def decodeNumber(self, s):
+        return parseNumber(self.decode(s))
+    def decodeDate(self, s):
+        return parseDate(self.decode(s))
+    def makeParseArray(self,subtype):
+        if subtype in self.stringOIDs:
+            decoder = self.decodeString
+        else:
+            decoder = self.specialDecoders.get(subtype)
+        return lambda result: arrayparser.decode(result,decoder)
     def decode(self,b):
         return b.decode('utf-8',errors='replace')
+    def demogrify(self,result,typ):
+        decoder = self.specialDecoders.get(typ)
+        if decoder:
+            return decoder(result)
+        return result
     def connect(self):
         if self.safe.raw is None:
             self.safe.raw = interface.connect(*self.conninfo)
             interface.setErrorVerbosity(self.safe.raw,interface.PQERRORS_VERBOSE)
+        self.setup(self.safe.raw)
         return self.safe.raw
     def mogrify(self,i):
         if i is None:
@@ -214,7 +246,8 @@ class Connection:
     def encode(self,i):
         return self.mogrify(i).encode('utf-8')
     def execute(self,stmt,args=()):
-        raw = self.connect()
+        return self.executeRaw(self.connect(),stmt,args)
+    def executeRaw(self,raw,stmt,args=()):
         if isinstance(args,dict):
             # just figured out a neat trick to let %(named)s parameters
             keys = args.keys()

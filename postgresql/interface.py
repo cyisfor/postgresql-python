@@ -29,6 +29,7 @@ def escapeThing(escaper):
         lib.PQfreemem(result)
         return ret.decode('utf-8')
     return run
+ftype = lib.PQftype
 escapeLiteral = escapeThing(lib.PQescapeLiteral)
 escapeIdentifier = escapeThing(lib.PQescapeIdentifier)
 setErrorVerbosity = lib.PQsetErrorVerbosity
