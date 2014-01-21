@@ -187,19 +187,24 @@ class Connection:
     def setup(self,raw):
         if self.specialDecoders: return
         self.specialDecoders = {}
+        for oid in self.getOIDs(raw,'N'):
+            self.specialDecoders[int(oid)] = self.decodeNumber
         for oid in self.getOIDs(raw,'D'):
             self.specialDecoders[oid] = self.decodeDate
-        for oid,subtype in self.executeRaw(raw,"SELECT typarray,oid FROM pg_type WHERE typcategory = $1",('A',)):
-            self.specialDecoders[oid] = self.makeParseArray(subtype)
-        for oid in self.getOIDs(raw,'N'):
-            self.specialDecoders[oid] = self.decodeNumber
-        for oid in self.getOIDs(raw,'S'):
-            self.specialDecoders[oid] = self.decode
         self.stringOIDs = set(self.getOIDs(raw,'S'))
+        for oid in self.stringOIDs:
+            self.specialDecoders[oid] = self.decode
+        for oid,subtype in self.executeRaw(raw,"SELECT typarray,oid FROM pg_type WHERE typarray > 0"):
+            print(oid,'array for',subtype)
+            parser = self.makeParseArray(subtype)
+            if parser:
+                self.specialDecoders[oid] = parser
     def getOIDs(self,raw,category):
         return (int(row[0]) for row in self.executeRaw(raw,"SELECT oid FROM pg_type WHERE typcategory = $1",(category,)))
     def decodeString(self, s):
-        return self.decode(s[1:-1])
+        if s and s[0] in ("'",'"'):
+            s = s[1:-1]
+        return self.decode(s)
     def decodeNumber(self, s):
         return parseNumber(self.decode(s))
     def decodeDate(self, s):
@@ -209,10 +214,14 @@ class Connection:
             decoder = self.decodeString
         else:
             decoder = self.specialDecoders.get(subtype)
-        return lambda result: arrayparser.decode(result,decoder)
+        if not decoder:
+            print('no leaf decoder for ',subtype)
+        else:
+            return lambda result: arrayparser.decode(result,decoder)
     def decode(self,b):
         return b.decode('utf-8',errors='replace')
     def demogrify(self,result,typ):
+        print('demogrifying',typ,self.specialDecoders.get(typ))
         decoder = self.specialDecoders.get(typ)
         if decoder:
             return decoder(result)
