@@ -29,7 +29,6 @@ def decodeArray(v,decodeLeaf):
     return result
 
 def decode(v,decodeLeaf):
-    print('....',v)
     assert(v[0]==leftBrace)
     if v == b'{NULL}': return ()
     return decodeArray(v[1:],decodeLeaf)
