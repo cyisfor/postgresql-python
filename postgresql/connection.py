@@ -159,6 +159,8 @@ def makederp(typ,args):
 class LocalConn(threading.local):
     raw = None
 
+quotes = set((b"'"[0],b'"'[0]))
+
 class Connection:
     inTransaction = False
     savePoint = None
@@ -201,7 +203,8 @@ class Connection:
     def getOIDs(self,raw,category):
         return (int(row[0]) for row in self.executeRaw(raw,"SELECT oid FROM pg_type WHERE typcategory = $1",(category,)))
     def decodeString(self, s):
-        if s and s[0] in ("'",'"'):
+        # this is a huge copout
+        if s and s[0] in quotes:
             s = s[1:-1]
         return self.decode(s)
     def decodeNumber(self, s):
@@ -262,6 +265,14 @@ class Connection:
                 if not '%('+key+')' in stmt:
                     raise SQLError(stmt,{'message': "Named args must all be in the statement! Missing "+key})
             subs = dict(zip(keys,['$'+str(i) for i in range(1,1+len(keys))]))
+            if self.verbose:
+                def derpify(s):
+                    if isinstance(s,int):
+                        return str(s)
+                    else:
+                        return "'"+str(s)+"'"
+                derpsubs = dict((key,derpify(args[key])) for key in keys)
+                print(stmt % derpsubs)
             stmt = stmt % subs
             args = [args[key] for key in keys]
             # badda boom
@@ -312,6 +323,8 @@ class Connection:
                 0)
         self.status = interface.resultStatus(result)
         self.result = Result(self,raw,result,fullstmt)
+        if self.verbose:
+            self.out.write(str(self.result))
         return self.result
     def copy(self,stmt,source=None):
         raw = self.connect()
