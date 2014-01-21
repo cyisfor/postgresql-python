@@ -193,6 +193,8 @@ class Connection:
             self.specialDecoders[oid] = self.makeParseArray(subtype)
         for oid in self.getOIDs(raw,'N'):
             self.specialDecoders[oid] = self.decodeNumber
+        for oid in self.getOIDs(raw,'S'):
+            self.specialDecoders[oid] = self.decode
         self.stringOIDs = set(self.getOIDs(raw,'S'))
     def getOIDs(self,raw,category):
         return (int(row[0]) for row in self.executeRaw(raw,"SELECT oid FROM pg_type WHERE typcategory = $1",(category,)))
