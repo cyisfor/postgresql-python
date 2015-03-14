@@ -47,6 +47,10 @@ def saved(connection):
     try:
         yield connection
         connection.execute("RELEASE SAVEPOINT "+name)
-    except:
-        connection.execute("ROLLBACK TO "+name)
-        raise
+    except Exception as ee:
+        try: connection.execute("ROLLBACK TO "+name)
+        except SQLError as e:
+            print(e)
+            print('-'*60)
+            print(ee)
+        raise(ee)

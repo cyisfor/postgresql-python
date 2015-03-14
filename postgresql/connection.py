@@ -4,6 +4,8 @@ import datetime
 import traceback
 import time
 
+import sys
+
 import threading
 
 class Prepared(str): pass
@@ -76,6 +78,8 @@ def parseDate(result):
     return result
 
 def parseNumber(result):
+    if result == 'NULL':
+        return None
     if '.' in result:
         return float(result)
     return int(result)
@@ -84,8 +88,10 @@ class Result(list):
     error = None
     tuplesUpdated = None
     status = None
-    def __init__(self,conn,rawconn,raw,stmt):
+    verbose = None
+    def __init__(self,conn,rawconn,raw,stmt,args):
         # no reason to leave the result sitting around in C structures now?
+        self.verbose = conn.verbose
         self.decode = conn.decode
         self.demogrify = conn.demogrify
         self.statusId = interface.resultStatus(raw)
@@ -116,6 +122,13 @@ class Result(list):
                         }
             interface.clear(raw)
             if self.statusId != interface.PGRES_NONFATAL_ERROR:
+                if self.verbose:
+                    print(stmt,file=sys.stderr)
+                    print(args,file=sys.stderr)
+                    print(self.status,file=sys.stderr)
+                    print(error,file=sys.stderr)
+                    sys.stderr.flush()
+
                 raise SQLError(stmt,error)
             else:
                 self.error = error
@@ -301,7 +314,7 @@ class Connection:
                         stmt.encode('utf-8'),
                         len(args),
                         types)
-                Result(self,raw,result,fullstmt) # needed to catch/format errors
+                Result(self,raw,result,fullstmt,args) # needed to catch/format errors
                 self.prepareds[stmt] = Prepared(name)
             else:
                 result = interface.executeOnce(raw,
@@ -313,7 +326,7 @@ class Connection:
                         fmt,
                         0);
                 self.status = interface.resultStatus(result)
-                self.result = Result(self,raw,result,fullstmt)
+                self.result = Result(self,raw,result,fullstmt,args)
                 if len(stmt) > 14:
                     self.executedBefore.add(stmt)
                 return self.result
@@ -326,7 +339,7 @@ class Connection:
                 fmt,
                 0)
         self.status = interface.resultStatus(result)
-        self.result = Result(self,raw,result,fullstmt)
+        self.result = Result(self,raw,result,fullstmt,args)
         if self.verbose:
             self.out.write(str(self.result))
         return self.result
@@ -357,7 +370,7 @@ class Connection:
                     out = self.out if self.out else sys.stdout
                     print(message,file=out)
                     out.flush()
-                raise SQLError(message,stmt)
+                raise SQLError(stmt,{'message': message})
             else:
                 yield self.decode(ctypes.string_at(buf))
     def copyOut(self,source,raw):
