@@ -52,7 +52,7 @@ for line in pid.stdout:
             value,num = value.split('=')
             counter = count(int(num))
             value = value.rstrip()
-        i = counter.__next__()
+        i = next(counter)
         v = enums.get(name)
         if v:
             v.append((value,i))
