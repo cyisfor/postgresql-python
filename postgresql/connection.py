@@ -216,6 +216,16 @@ class Connection:
 			parser = self.makeParseArray(subtype)
 			if parser:
 				self.specialDecoders[oid] = parser
+	def registerDecoder(self,decoder,name,namespace='public'):
+		raw = self.connect()
+		namespace = self.executeRaw(raw, 'SELECT oid FROM pg_namespace WHERE nspname = $1::name',(namespace,))
+		assert namespace;
+		namespace = namespace[0][0]
+		name = self.executeRaw(raw,'SELECT oid FROM pg_type WHERE typnamespace = $1::oid AND typname = $2::name',(namespace,name))
+		assert name
+		oid = name[0][0]
+		self.specialDecoders[oid] = decoder
+		print('registered decoder for ',namespace,name,oid)
 	def getOIDs(self,raw,category):
 		return (int(row[0]) for row in self.executeRaw(raw,"SELECT oid FROM pg_type WHERE typcategory = $1",(category,)))
 	def decodeString(self, s):
