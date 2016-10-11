@@ -101,7 +101,7 @@ class Result(list):
 		if self.statusId not in OKstatuses:
 			error = {}
 			derp = interface.connectionErrorMessage(rawconn)
-			print("DERP",derp)
+
 			for k,v in (('message',interface.errorMessage(raw)),
 									('connection',derp),
 					('severity',interface.errorField(raw,interface.PG_DIAG_SEVERITY)),
@@ -262,16 +262,18 @@ class Connection:
 			self.safe.raw = interface.connect(*self.conninfo)
 			# can't setup until we have a good connection...
 			need_setup = True
-		while interface.status(self.safe.raw) != interface.CONNECTION_OK:
-			print("connection bad?")
-			import time
-			time.sleep(1)
-			interface.reset(self.safe.raw)
+		self.reconnect()
 		if need_setup:
 			# but don't setup if we already did!
 			interface.setErrorVerbosity(self.safe.raw,interface.PQERRORS_VERBOSE)
 			self.setup(self.safe.raw)
 		return self.safe.raw
+	def reconnect(self):
+		while interface.status(self.safe.raw) != interface.CONNECTION_OK:
+			print("connection bad?")
+			import time
+			time.sleep(1)
+			interface.reset(self.safe.raw)
 	def mogrify(self,i):
 		if i is None:
 			return 'NULL'
@@ -333,37 +335,62 @@ class Connection:
 			types = makederp(ctypes.c_void_p,(None,)*len(args))
 			if not stmt in self.executedBefore:
 				name = anonstatement()
-				result = interface.prepare(raw,
-						name.encode('utf-8'),
-						stmt.encode('utf-8'),
-						len(args),
-						types)
-				Result(self,raw,result,fullstmt,args) # needed to catch/format errors
+				while True:
+					result = interface.prepare(raw,
+																		 name.encode('utf-8'),
+																		 stmt.encode('utf-8'),
+																		 len(args),
+																		 types)
+					try:
+						Result(self,raw,result,fullstmt,args) # needed to catch/format errors
+					except SQLError as e:
+						if e['connection'].startsWith(b'server closed the connection unexpectedly'):
+							self.reconnect()
+						else: raise
+					else:
+						break
 				self.prepareds[stmt] = Prepared(name)
 			else:
-				result = interface.executeOnce(raw,
-						stmt.encode('utf-8'),
-						len(args) if args else 0,
-						types,
-						values,
-						lengths,
-						fmt,
-						0);
-				self.status = interface.resultStatus(result)
-				self.result = Result(self,raw,result,fullstmt,args)
+				while True:
+					result = interface.executeOnce(raw,
+							stmt.encode('utf-8'),
+							len(args) if args else 0,
+							types,
+							values,
+							lengths,
+							fmt,
+							0);
+					self.status = interface.resultStatus(result)
+					try:
+						self.result = Result(self,raw,result,fullstmt,args)
+					except SQLError as e:
+						if e['connection'].startsWith(b'server closed the connection unexpectedly'):
+							self.reconnect()
+						else: raise
+					else:
+						break
+					
 				if len(stmt) > 14:
 					self.executedBefore.add(stmt)
 				return self.result
 
-		result = interface.execute(raw,
-				name.encode('utf-8'),
-				len(args),
-				values,
-				lengths,
-				fmt,
-				0)
-		self.status = interface.resultStatus(result)
-		self.result = Result(self,raw,result,fullstmt,args)
+		while True:
+			result = interface.execute(raw,
+					name.encode('utf-8'),
+					len(args),
+					values,
+					lengths,
+					fmt,
+					0)
+			self.status = interface.resultStatus(result)
+			try:
+				self.result = Result(self,raw,result,fullstmt,args)
+			except SQLError as e:
+				if e['connection'].startsWith(b'server closed the connection unexpectedly'):
+					self.reconnect()
+				else: raise
+			else:
+				break
 		if self.verbose:
 			self.out.write(str(self.result))
 		return self.result
