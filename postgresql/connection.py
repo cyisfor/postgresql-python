@@ -18,6 +18,8 @@ class SQLError(IOError):
 		return self.stmt+'\n\n'+'\n'.join((k+'='+str(v) for k,v in self.info.items()))
 	def __repr__(self):
 		return 'SQLError('+repr(self.info)+')'
+	def __getitem__(self,n):
+		return self.info[n]
 
 OKstatuses = set((
 	interface.PGRES_COMMAND_OK,
@@ -203,6 +205,14 @@ class Connection:
 		self.prepareds = dict()
 	specialDecoders = None
 	stringOIDs = ()
+	def reconnecting(self,f):
+		while True:
+			try:
+				return f()	
+			except SQLError as e:
+				if e['connection'].startswith(b'server closed the connection unexpectedly'):
+					self.reconnect()
+				else: raise
 	def setup(self,raw):
 		if self.specialDecoders: return
 		self.specialDecoders = {}
@@ -269,11 +279,16 @@ class Connection:
 			self.setup(self.safe.raw)
 		return self.safe.raw
 	def reconnect(self):
+		boop = False
 		while interface.status(self.safe.raw) != interface.CONNECTION_OK:
+			boop = True
 			print("connection bad?")
 			import time
 			time.sleep(1)
 			interface.reset(self.safe.raw)
+		if boop:
+			self.executedBefore = set()
+			self.prepareds = dict()
 	def mogrify(self,i):
 		if i is None:
 			return 'NULL'
@@ -335,23 +350,17 @@ class Connection:
 			types = makederp(ctypes.c_void_p,(None,)*len(args))
 			if not stmt in self.executedBefore:
 				name = anonstatement()
-				while True:
+				@self.reconnecting
+				def _():
 					result = interface.prepare(raw,
 																		 name.encode('utf-8'),
 																		 stmt.encode('utf-8'),
 																		 len(args),
 																		 types)
-					try:
-						Result(self,raw,result,fullstmt,args) # needed to catch/format errors
-					except SQLError as e:
-						if e['connection'].startsWith(b'server closed the connection unexpectedly'):
-							self.reconnect()
-						else: raise
-					else:
-						break
+					Result(self,raw,result,fullstmt,args) # needed to catch/format errors
 				self.prepareds[stmt] = Prepared(name)
 			else:
-				while True:
+				@self.reconnecting
 					result = interface.executeOnce(raw,
 							stmt.encode('utf-8'),
 							len(args) if args else 0,
@@ -361,20 +370,14 @@ class Connection:
 							fmt,
 							0);
 					self.status = interface.resultStatus(result)
-					try:
-						self.result = Result(self,raw,result,fullstmt,args)
-					except SQLError as e:
-						if e['connection'].startsWith(b'server closed the connection unexpectedly'):
-							self.reconnect()
-						else: raise
-					else:
-						break
+					self.result = Result(self,raw,result,fullstmt,args)
 					
 				if len(stmt) > 14:
 					self.executedBefore.add(stmt)
 				return self.result
 
-		while True:
+		@self.reconnecting
+		def _():
 			result = interface.execute(raw,
 					name.encode('utf-8'),
 					len(args),
@@ -383,28 +386,23 @@ class Connection:
 					fmt,
 					0)
 			self.status = interface.resultStatus(result)
-			try:
-				self.result = Result(self,raw,result,fullstmt,args)
-			except SQLError as e:
-				if e['connection'].startsWith(b'server closed the connection unexpectedly'):
-					self.reconnect()
-				else: raise
-			else:
-				break
+			self.result = Result(self,raw,result,fullstmt,args)
 		if self.verbose:
 			self.out.write(str(self.result))
 		return self.result
 	def copy(self,stmt,source=None):
 		raw = self.connect()
-		result = interface.executeOnce(raw,
-				stmt.encode('utf-8'),
-				0,
-				None,
-				None,
-				None,
-				None,
-				0)
-		self.status = interface.resultStatus(result)
+		@reconnecting
+		def _():
+			result = interface.executeOnce(raw,
+					stmt.encode('utf-8'),
+					0,
+					None,
+					None,
+					None,
+					None,
+					0)
+			self.status = interface.resultStatus(result)
 		if 'TO' in stmt:
 			return self.copyIn(stmt,raw)
 		else:
