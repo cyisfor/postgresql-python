@@ -101,6 +101,7 @@ class Result(list):
 		if self.statusId not in OKstatuses:
 			error = {}
 			for k,v in (('message',interface.errorMessage(raw)),
+									('connection',interface.connectionErrorMessage(raw)),
 					('severity',interface.errorField(raw,interface.PG_DIAG_SEVERITY)),
 					('primary',interface.errorField(raw,interface.PG_DIAG_MESSAGE_PRIMARY)),
 					('detail',interface.errorField(raw,interface.PG_DIAG_MESSAGE_DETAIL)),
@@ -218,14 +219,14 @@ class Connection:
 				self.specialDecoders[oid] = parser
 	def registerDecoder(self,decoder,name,namespace='public'):
 		raw = self.connect()
-		namespace = self.executeRaw(raw, 'SELECT oid FROM pg_namespace WHERE nspname = $1::name',(namespace,))
-		assert namespace;
-		namespace = namespace[0][0]
-		name = self.executeRaw(raw,'SELECT oid FROM pg_type WHERE typnamespace = $1::oid AND typname = $2::name',(namespace,name))
-		assert name
-		oid = name[0][0]
+		nsnum = self.executeRaw(raw, 'SELECT oid FROM pg_namespace WHERE nspname = $1::name',(namespace,))
+		assert nsnum;
+		nsnum = nsnum[0][0]
+		oid = self.executeRaw(raw,'SELECT oid FROM pg_type WHERE typnamespace = $1::oid AND typname = $2::name',(nsnum,name))
+		assert oid
+		oid = oid[0][0]
 		self.specialDecoders[oid] = decoder
-		print('registered decoder for ',namespace,name,oid)
+		print('registered decoder for ',namespace+'.'+name,oid)
 	def getOIDs(self,raw,category):
 		return (int(row[0]) for row in self.executeRaw(raw,"SELECT oid FROM pg_type WHERE typcategory = $1",(category,)))
 	def decodeString(self, s):
@@ -254,10 +255,19 @@ class Connection:
 			return decoder(result)
 		return result
 	def connect(self):
+		need_setup = False
 		if self.safe.raw is None:
 			self.safe.raw = interface.connect(*self.conninfo)
+			# can't setup until we have a good connection...
+			need_setup = True
+		while interface.status(self.safe.raw) != interface.CONNECTION_OK:
+			print("connection bad?")
+			import time
+			time.sleep(1)
+			interface.reset(self.safe.raw)
+		if need_setup:
 			interface.setErrorVerbosity(self.safe.raw,interface.PQERRORS_VERBOSE)
-		self.setup(self.safe.raw)
+			self.setup(self.safe.raw)
 		return self.safe.raw
 	def mogrify(self,i):
 		if i is None:

@@ -6,6 +6,8 @@ assert(lib)
 
 class connection(ctypes.c_void_p): pass
 
+CONNECTION_OK, CONNECTION_BAD = range(2)
+
 connect = lib.PQconnectdbParams
 connect.restype = connection
 finish = lib.PQfinish
