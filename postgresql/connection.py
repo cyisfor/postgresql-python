@@ -100,8 +100,10 @@ class Result(list):
 			self.status = resStatus
 		if self.statusId not in OKstatuses:
 			error = {}
+			derp = interface.connectionErrorMessage(rawconn)
+			print("DERP",derp)
 			for k,v in (('message',interface.errorMessage(raw)),
-									('connection',interface.connectionErrorMessage(raw)),
+									('connection',derp),
 					('severity',interface.errorField(raw,interface.PG_DIAG_SEVERITY)),
 					('primary',interface.errorField(raw,interface.PG_DIAG_MESSAGE_PRIMARY)),
 					('detail',interface.errorField(raw,interface.PG_DIAG_MESSAGE_DETAIL)),
@@ -266,6 +268,7 @@ class Connection:
 			time.sleep(1)
 			interface.reset(self.safe.raw)
 		if need_setup:
+			# but don't setup if we already did!
 			interface.setErrorVerbosity(self.safe.raw,interface.PQERRORS_VERBOSE)
 			self.setup(self.safe.raw)
 		return self.safe.raw
