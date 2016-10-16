@@ -345,39 +345,36 @@ class Connection:
 			out.write(str(time.time())+' '+fullstmt)
 			out.write(' '.join((':',)+args)+'\n')
 			out.flush()
-		name = self.prepareds.get(stmt)
-		if name is None:
-			types = makederp(ctypes.c_void_p,(None,)*len(args))
-			if not stmt in self.executedBefore:
-				name = anonstatement()
-				@self.reconnecting
-				def _():
+		@self.reconnecting
+		def _():
+			name = self.prepareds.get(stmt)
+			if name is None:
+				types = makederp(ctypes.c_void_p,(None,)*len(args))
+				if not stmt in self.executedBefore:
+					name = anonstatement()
 					result = interface.prepare(raw,
 																		 name.encode('utf-8'),
 																		 stmt.encode('utf-8'),
 																		 len(args),
 																		 types)
 					Result(self,raw,result,fullstmt,args) # needed to catch/format errors
-				self.prepareds[stmt] = Prepared(name)
-			else:
-				@self.reconnecting
+					self.prepareds[stmt] = Prepared(name)
+				else:
 					result = interface.executeOnce(raw,
-							stmt.encode('utf-8'),
-							len(args) if args else 0,
-							types,
-							values,
-							lengths,
-							fmt,
-							0);
+																				 stmt.encode('utf-8'),
+																				 len(args) if args else 0,
+																				 types,
+																				 values,
+																				 lengths,
+																				 fmt,
+																				 0);
 					self.status = interface.resultStatus(result)
 					self.result = Result(self,raw,result,fullstmt,args)
 					
-				if len(stmt) > 14:
-					self.executedBefore.add(stmt)
-				return self.result
+					if len(stmt) > 14:
+						self.executedBefore.add(stmt)
+						return self.result
 
-		@self.reconnecting
-		def _():
 			result = interface.execute(raw,
 					name.encode('utf-8'),
 					len(args),
@@ -392,7 +389,7 @@ class Connection:
 		return self.result
 	def copy(self,stmt,source=None):
 		raw = self.connect()
-		@reconnecting
+		@self.reconnecting
 		def _():
 			result = interface.executeOnce(raw,
 					stmt.encode('utf-8'),
@@ -406,6 +403,12 @@ class Connection:
 		if 'TO' in stmt:
 			return self.copyIn(stmt,raw)
 		else:
+			if hasattr(source,'read'):
+				if hasattr(source,'buffer'):
+					source = source.buffer
+				source = source.readinto
+			elif hasattr(source,'readinto'):
+				source = source.readinto
 			return self.copyOut(source,raw)
 	def copyIn(self,stmt,raw):
 		while True:
@@ -423,14 +426,13 @@ class Connection:
 			else:
 				yield self.decode(ctypes.string_at(buf))
 	def copyOut(self,source,raw):
-		try:
-			while True:
-				buf = source.read(0x1000)
-				if not buf: break
-				if isinstance(buf,str):
-					buf = buf.encode('utf-8')
-				interface.putCopyData(raw,buf,len(buf))
-		except Exception as e:
-			interface.putCopyEnd(raw,str(e).encode('utf-8'))
-			raise
+		buf = bytearray(0x1000)
+		while True:
+			try:
+				amt = source(buf)
+				if not amt: break
+				assert 1 == interface.putCopyData(raw,bytes(buf),len(buf))
+			except Exception as e:
+				assert 1 == interface.putCopyEnd(raw,str(e).encode('utf-8'))
+				raise
 		interface.putCopyEnd(raw,None)
