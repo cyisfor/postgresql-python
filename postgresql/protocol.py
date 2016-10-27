@@ -1,6 +1,28 @@
 # uggggh
 import struct
 
+from . import main
+
+def U(fmt, message):
+	ret = struct.unpack("!"+fmt,message)
+	if len(ret) == 0:
+		return ret[0]
+	return ret
+
+def receive():
+	typ = main.c.read(1)
+	length = struct.unpack("!L",inp.read(4))
+	length -= 4 # length includes itself
+	return typ, inp.read(length)
+
+def startup(**kw):
+	import frontend as F
+	import backend as B
+	F.StartupMessage(kw)
+	type,message = read_message()
+	if type == B.ErrorResponse:
+
+
 def raw_read(inp):
 	typ = inp.read(1)
 	length = struct.unpack("!L",inp.read(4))

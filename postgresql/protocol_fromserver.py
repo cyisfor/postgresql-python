@@ -1,22 +1,8 @@
 # these are the things you may receive FROM the server (i.e. "backend" messages)
-# each has a tuple for the message's fields, and can register handlers for messages
-# init for each takes 'message' because we never construct these from scratch ourselves?
 
 import struct
 
-def U(fmt, message):
-	ret = struct.unpack("!"+fmt,message)
-	if len(ret) == 0:
-		return ret[0]
-	return ret
-
-from . import main
-
-def receive():
-	typ = main.c.read(1)
-	length = struct.unpack("!L",inp.read(4))
-	length -= 4 # length includes itself
-	return typ, inp.read(length)
+ErrorResponse = b'E'
 
 class Message: pass
 

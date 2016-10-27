@@ -82,9 +82,10 @@ def Query(query):
 def SSLRequest():
 	main.c.send(struct.pack("!ii",8,80877103))
 			
-def StartupMessage(name,value):
-	mess = struct.pack("!i",196608) + String(name)+String(value)
-	return struct.pack("!i",len(mess))+mess
+def StartupMessage(**kw):
+	assert 'user' in kw
+	mess = P("i",196608) + b''.join(String(name)+String(value) for name,value in kw.items()) + b'\0'
+	main.c.send(P("i",len(mess)+4,mess)
 
 def Sync():
 	send(b'S')
