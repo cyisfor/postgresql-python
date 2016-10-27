@@ -15,14 +15,117 @@ def receive():
 	length -= 4 # length includes itself
 	return typ, inp.read(length)
 
+def String(message):
+	end = message.find(b'\0')
+	return message[:end].decode('utf-8'),message[end+1:]
+
+def herpaderp(d):
+	# python doesn't let you specify single bytes as meaningful letters
+	# because python sucks
+	return dict((k[0],v) for k,v in d.items())
+
+derp2name = herpaderp({
+	b'S': 'severity',
+	b'C': 'code',
+	b'M': 'message',
+	b'D': 'detail',
+	b'H': 'hint',
+	b'P': 'position',
+	b'p': 'internal_position',
+	b'q': 'internal_query',
+	b'W': 'where',
+	b's': 'schema',
+	b't': 'table',
+	b'c': 'column',
+	b'd': 'data_type',
+	b'n': 'constraint',
+	b'F': 'filename',
+	b'L': 'line',
+	b'R': 'routine'
+})
+
+class DBError(Exception): pass
+
+def derpauth():
+	import frontend as F
+	type,message = read_message()
+	assert type == B.Authentication,(type,message)
+	assert U('i',message[:4]) == 0, message
+
+def fieldThingy(message):
+	fields = {}
+	while message:
+		ftype = message[0]
+		if ftype == 0: break
+		ftype = bytes(ftype,) # ugh
+		value,message = String(message[1:])
+		fields[derp2name[ftype]] = value
+	return fields
+	
 def startup(**kw):
 	import frontend as F
 	import backend as B
+	get_password = kw.pop('get_password',None)
 	F.StartupMessage(kw)
 	type,message = read_message()
 	if type == B.ErrorResponse:
+		raise DBError(fieldThingy(message))
+	elif type != B.Authentication:
+		raise DBError("fuck")
+	# postgresql sucks
+	status = U('i',message[:4])
+	if status == 0: return
+	if status == 2:
+		raise DBError("Protocol designed by megalomaniacal business managers")
+	if status == 3:
+		assert get_password, "specify a password plz"
+		F.PasswordMessage(get_password())
+		return derpauth()
+	if status == 5:
+		user,passwd = get_password()
+		salt = message[4:]
+		from hashlib import md5
+		F.PasswordMessage('md5'+md5(md5(password + user).hexdigest(),salt).hexdigest())
+		return derpauth()
+	if status == 6:
+		raise DBError("SCM credentials")
+	if status == 7
+		raise DBError("GSSAPI sucks")
+	if status == 8:
+		raise DBError("we don't do this either")
+	if status == 9:
+		raise DBError("fuck SSPI")
 
+	wait_for_backend()
 
+parameters = {}
+
+on_notice = print
+secret = None
+pid = None
+	
+def wait_for_backend():
+	global secret
+	global pid
+	while True:
+		type,message = read_message()
+		if type == B.BackendKeyData:
+			pid,secret = U('ii',message)
+		elif type == B.ParameterStatus:
+			name,message = String(message)
+			value,message = String(message)
+			parameters[name] = value
+		elif type == B.ReadyForQuery:
+			return
+		elif type == B.ErrorResponse:
+			raise DBError(fieldThingy(message))
+		elif type == B.NoticeResponse:
+			on_notice(fieldThingy(message))
+
+		
+			
+
+	
 def raw_read(inp):
 	typ = inp.read(1)
 	length = struct.unpack("!L",inp.read(4))

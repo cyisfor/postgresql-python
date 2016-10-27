@@ -58,9 +58,6 @@ def _(self, message): pass
 @backend('3','CloseComplete')
 def _(self, message): pass
 
-def String(message):
-	end = message.find(b'\0')
-	return message[:end].decode('utf-8'),message[end+1:]
 
 @backend('C','CommandComplete')
 def _(self, message):
