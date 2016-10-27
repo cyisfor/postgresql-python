@@ -1,300 +1,93 @@
-# uggggh
+# these are the things you can send to the server (i.e. "frontend" messages)
+# each is a function, that sends stuff to the underlying db socket when called.
+
+from flatten import flatten
+from . import main
+
 import struct
 
-def raw_read(inp):
-	typ = inp.read(1)
-	length = struct.unpack("!L",inp.read(4))
-	length -= 4 # length includes itself
-	return typ, inp.read(length)
+def P(fmt,*stuff):
+	return struct.pack('!'+fmt,*stuff)
 
-def raw_write(out,typ,contents):
-	out.write(typ + struct.pack("!L",len(contents)) + contents)
+def send(typ,*contents):
+	contents = tuple(flatten(contents))
+	total = sum(len(thing) for thing in contents)
+	# have to measure the total size to start the message
+	# but can send the data piecewise if it's too big
+	buf = [typ + P("L",total+4)]
+	cur = len(buf[0])
+	for thing in contents:
+		buf.append(thing)
+		cur += len(thing)
+		if cur > 0x1000:
+			main.c.send(b''.join(buf))
+			buf = []
 
-class Authentication(Message):
-	def __init__(self, message):
-		self.subtype = message[:4]
-		self.subtype = struct.unpack('!L',subtype)
-		if self.subtype == 5:
-			self.salt = message[4:]
-		elif self.subtype == 8:
-			self.gssapifuckery = message[4:]
-			
-class BackendKeyData(Message):
-	def __init__(self, message):
-		self.pid, self.key = struct.unpack("!LL",message)
-
-def little_array(message, size=2, incsize=2):
-	if incsize == 2:
-		derp = "!H"
-	elif incsize == 4:
-		derp = "!L"
-	elif incsize == 1:
-		derp = "b"
-	num = struct.unpack("!H",message[:size])
-	message = message[size:]
-	pos = 0
-	result = [None]*num
-	for i in range(num):
-		length = struct.unpack(derp, message[pos:pos+incsize])
-		result[i] = message[pos+incsize:pos+incsize+length]
-		pos += incsize + length
-	return result, message[pos:]
-
-def derp(size):
-	if size == 2:
-		return "H"
-	elif size == 4:
-		return "L"
-	elif size == 1:
-		return "b"
-
-def parse_ints(message,incsize=2,size=2):
-	num = struct.unpack(derp(size),message[:size])
-	message = message[size:]
-	result = [0]*num
-	incderp = derp(incsize)*num
-	result = struct.unpack("!"+incderp, message)
-	return result, message[size+incsize*(num+1)]
-
-def encode_ints(ints,incsize=2,size=2):
-	incderp = derp(incsize) * len(ints)
-	return (struct.pack(derp(size),len(ints)) +
-	        b''.join(struct.pack(incderp,*ints)))
-
-def frontend(typ):
-	typ = typ.encode('utf-8')
-	def deco(f):
-		def wrapper(*a,**kw):
-			mess = f(*a,**kw) or ""
-			return typ + struct.pack("!L",len(mess))+mess
-		return wrapper
-	return deco
-
+def int_array(elems, sizefmt='h', elemfmt='h'):
+	return P(sizefmt + (elemfmt * len(elems)),*elems)
+	
 def String(s):
 	return s.encode('utf-8') + b'\0'
 
-@frontend('B')
-def Bind(dest, source, formats, values, result_formats):
-	return (String(dest) + String(source) + 
-	        encode_ints(formats) +
-	        encode_little_array(values) +
-	        encode_ints(result_formats))
+def Blob(thing,fmt='i'):
+	return P(fmt,len(thing))+thing
 
-class BindComplete(Message): pass
+def Blobs(things,fmt='h',elemfmt='i'):
+	return chain((P(fmt,len(things)),),
+							 (Blob(thing,elemfmt) for thing in things))
+
+def Bind(dest, source, formats, values, result_formats):
+	send
+	(b'B',String(dest), String(source),
+	 int_array(formats),
+	 Blobs(values),
+	 int_array(result_formats))
 
 def CancelRequest(target,secret):
-	mess = struct.pack("!lll",80877102,target,secret)
-	return struct.pack("!L",len(mess))+mess
+	# it's always 16 bytes long, so don't need to pack twice
+	return P("iiii",16,80877102,target,secret)
 
-@frontend('C')
 def Close(is_portal, name):
-	return (b'P' if is_portal else b'S') + name.encode('utf-8')
+	send(b'C', b'P' if is_portal else b'S' + String(name))
 
-class CloseComplete(Message): pass
-class CommandComplete(Message):
-	def __init__(self, message):
-		message = message.decode("utf-8")
-		self.command,*message = message.split(" ")
-		if self.command == "INSERT":
-			self.oid, self.rows = message
-		else:
-			self.rows = message[0]
-			
-class CopyData(Message):
-	def __init__(self, message):
-		self.data = message
-	@frontend('d')
-	def __call__(self, data):
-		return data
+def CopyData(data):
+	send(b'd',data)
 
-class CopyDone(Message):
-	typ = 'c'
-	@frontend(CopyDone.typ)
-	def __call__(self): pass
+def CopyDone():
+	send(b'c')
 
-@frontend('f')
 def CopyFail(error):
-	return error.encode('utf-8')+b'\0'
-	
-class CopyResponse(Message):
-	def __init__(self, message):
-		self.is_binary = message[0] == 0
-		self.formats = parse_ints(message)
-		
-class CopyInResponse(CopyResponse): pass
-class CopyOutResponse(CopyResponse): pass
-class CopyBothResponse(CopyResponse): pass
+	send(b'f',String(error))
 
-class DataRow(Message):
-	def __init__(self, message):
-		self.values,message = little_array(message, 2, 4)
-
-@frontend('D')
 def Describe(is_portal, name):
-	return (b'P' if is_portal else b'S') + name.encode("utf-8") + b'\0'
+	send(b'D',b'P' if is_portal else b'S' + String(name))
 		
-class EmptyQueryResponse(Message): pass
-
-class ResponseWithFields(Message):
-	def __init__(self, message):
-		self.fields = little_array
-		# 0 terminator means len - 1
-		while pos < len(message) - 1:
-			length = message[pos]
-			self.fields.append(message[pos+1:pos+1+length])
-			pos += 1 + length
-
-class ErrorResponse(ResponseWithFields): pass
-
-@frontend('E')
 def Execute(name, max_rows=0):
-	return name.encode('utf-8')+b'\0'+struct.pack('!L',max_rows)
+	send(b'E',String(name)+struct.pack('!L',max_rows))
 
-@frontend('H')
-def Flush(): pass
+def Flush():
+	send(b'H')
 
-@frontend('F')
 def FunctionCall(oid, formats, arguments, result_format):
-	return (struct.pack("!L",oid) + encode_ints(formats)
-	        + encode_little_array(arguments,4)
-	        + struct.pack("!H", result_format))
+	send(b'F', P("i",oid), int_array(formats),
+			 Blobs(arguments),
+			 P("h",result_format))
 
-class FunctionCallResponse(Message):		
-	def __init__(self, message):
-		almostuseless = struct.unpack("!l", message[:4])
-		if almostuseless == -1:
-			self.null = True
-		else:
-			self.result = message[4:]
-
-class NoData(Message): pass
-class NoticeResponse(ResponseWithFields): pass
-class StringPair(Message):
-	def __init__(self, message):
-		self.pid = struct.unpack("!L",message[:4])
-		self.name, message = message.split(0,1)
-		self.value, message = message.split(0,1)
-		return message
-class NotificationResponse(StringPair): pass
-class ParameterDescription(Message):
-	def __init__(self, message):
-		self.num = struct.unpack("!H",message[:2])
-		assert self.num == (len(message)-2)/4
-		self.types = [0] * self.num
-		for i in range(self.num):
-			self.types[i] = struct.unpack("!L",message[2+4*i,2+4*(i+1)])
-class ParameterStatus(StringPair): pass
-
-@frontend('P')
-def Parse(dest, query, types):
-	return dest.encode('utf-8')+b'\0' + query.encode('utf-8')+b'\0'+encode_ints(types,4)
-
-class ParseComplete(Message): pass
-
-@frontend('p')
 def PasswordMessage(password):
-	return password.encode('utf-8')+b'\0'
+	send(b'p',String(password))
 
-class PortalSuspended(Message): pass
-
-@frontend('Q')
 def Query(query):
-	return query.encode('utf-8')+b'\0'
-
-class ReadyForQuery(Message):
-	idle = False
-	in_transaction = False
-	failed = False
-	def __init__(self,message):
-		self.status = message[0].decode()
-		if self.status == 'I':
-			self.idle = True
-		elif self.status == 'T':
-			self.in_transaction = True
-		elif self.status == 'E':
-			self.failed = True
-
-class RowDescription(Message):
-	def __init__(self, message):
-		self.num = struct.unpack("!H",message[:2])
-		self.fields = [None]*self.num
-		for i in range(self.num):
-			field = Field()
-			field.name, message = message.split(0,1)
-			field.oid, field.typlen, field.typmod = struct.unpack("!LHL",message)
-			message = message[4+2+4:]
-			self.fields[i] = field
+	send(b'Q',String(query))
 
 def SSLRequest():
-	mess = struct.pack("!l",80877103)
-	return struct.pack("!l",len(mess))+mess
+	main.c.send(struct.pack("!ii",8,80877103))
 			
 def StartupMessage(name,value):
-	mess = struct.pack("!l",196608) + name.encode('utf-8')+b'\0'+value.encode('utf-8')+b'\0'
-	return struct.pack("!l",len(mess))+mess
+	mess = struct.pack("!i",196608) + String(name)+String(value)
+	return struct.pack("!i",len(mess))+mess
 
-@frontend('S')
-def Sync(): pass
+def Sync():
+	send(b'S')
 
-@frontend('X')
-def Terminate(): pass
-			
-# read these FROM the server
-backend = {
-	'R': Authentication,
-	'K': BackendKeyData,
-	'2': BindComplete,
-	'3': CloseComplete,
-	'C': CommandComplete,
-	'd': CopyData,
-	'c': CopyDone,
-	'f': CopyFail,
-	'G': CopyInResponse,
-	'H': CopyOutResponse,
-	'W': CopyBothResponse,
-	'D': DataRow,
-	'l': EmptyQuery,
-	'E': Error,
-	'V': FunctionCallResponse,
-	'n': NoData,
-	'N': NoticeResponse,
-	'A': NotificationResponse,
-	't': ParameterDescription,
-	'S': ParameterStatus,
-	'1': ParseComplete,
-	's': PortalSuspended,
-	'Z': ReadyForQuery,
-	'T': RowDescription,
-}
-
-# send these TO the server
-frontend = {
-	'B': Bind,
-	'C': Close,
-	'd': CopyData,
-	'c': CopyDone,
-	'f': CopyFail,
-	'D': Describe,
-	'E': Execute,
-	'H': Flush,
-	'F': FunctionCall,
-	'P': Parse,
-	'p': PasswordMessage,
-	'Q': Query,
-	'S': Sync,
-	'X': Terminate
-}
-
-# make sure bytes
-def arrayify(derp):
-	derp = [(k.encode(),v) for k,v in derp.items()]
-	barr = [0]*max(derp[0] for derp in derp)
-	for k,v in derp:
-		barr[k] = v
-	return barr
-backend = arrayify(backend)
-
-def read_messages(inp):
-	while True:
-		typ,message = raw_read(inp)
-		backend[typ](message).dispatch(inp)
+def Terminate():
+	send(b'X')

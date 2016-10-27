@@ -1,15 +1,86 @@
-# uggggh
+# these are the things you may receive FROM the server (i.e. "backend" messages)
+# each has a tuple for the message's fields, and can register handlers for messages
+# init for each takes 'message' because we never construct these from scratch ourselves?
+
 import struct
 
-def raw_read(inp):
-	typ = inp.read(1)
+def U(fmt, message):
+	ret = struct.unpack("!"+fmt,message)
+	if len(ret) == 0:
+		return ret[0]
+	return ret
+
+from . import main
+
+def receive():
+	typ = main.c.read(1)
 	length = struct.unpack("!L",inp.read(4))
 	length -= 4 # length includes itself
 	return typ, inp.read(length)
 
-def raw_write(out,typ,contents):
-	out.write(typ + struct.pack("!L",len(contents)) + contents)
+class Message: pass
 
+messages = dict()
+
+def backend(key,name):
+	def deco(init):
+		class Value(Message):
+			type = key
+			def __init__(self,message):
+				init(self,message)
+		Value.__name__ = name
+		messages[key] = Value
+	return deco
+
+class AuthenticationRequired(Exception): pass
+class MD5Required(AuthenticationRequired):
+	def __init__(self,salt):
+		self.salt = salt
+		super().__init__("MD5 Required")
+
+class GSSContinue(AuthenticationRequired):
+	def __init__(self,data):
+		self.data = data
+		super().__init__("GSS continue")
+
+@backend('R',"Authentication")
+def _(self, message):
+	status = U('i',message[:4])
+	if status == 0: return
+	if status == 2:
+		raise AuthenticationRequired("Kerberos V5")
+	if status == 3:
+		raise AuthenticationRequired("Cleartext")
+	if status == 5:
+		raise MD5Required(message[4:])
+	if status == 6:
+		raise AuthenticationRequire("SCM credentials")
+	if status == 7
+		raise AuthenticationRequire("GSSAPI")
+	if status == 8:
+		raise GSSContinue(message)
+	if status == 9:
+		raise AuthenticationRequire("SSPI")
+
+@backend('K','BackendKeyData')
+def _(self, message):
+	self.pid, self.secret = U("ii",message)
+
+@backend('2','BindComplete')
+def _(self, message): pass
+
+@backend('3','CloseComplete')
+def _(self, message): pass
+
+def String(message):
+	end = message.find(b'\0')
+	return message[:end].decode('utf-8'),message[end+1:]
+
+@backend('C','CommandComplete')
+def _(self, message):
+	self.tag,_ = String(message)
+	
+	ummmm why not just to the protocol as it comes?
 class Authentication(Message):
 	def __init__(self, message):
 		self.subtype = message[:4]
