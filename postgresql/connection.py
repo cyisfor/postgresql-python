@@ -431,8 +431,8 @@ class Connection:
 			try:
 				amt = source(buf)
 				if not amt: break
-				assert 1 == interface.putCopyData(raw,bytes(buf),len(buf))
+				assert 1 == interface.putCopyData(raw,bytes(memoryview(buf)[:amt]),amt)
 			except Exception as e:
 				assert 1 == interface.putCopyEnd(raw,str(e).encode('utf-8'))
 				raise
-		interface.putCopyEnd(raw,None)
+		assert 1 == interface.putCopyEnd(raw,None)
