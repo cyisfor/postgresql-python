@@ -128,11 +128,11 @@ class Result(list):
 			interface.clear(raw)
 			if self.statusId != interface.PGRES_NONFATAL_ERROR:
 				if self.verbose:
-					sys.stderr.write('\n'.join(
+					sys.stderr.write('\n'.join(repr(s) for s in (
 						stmt,
 						repr(args),
 						self.status,
-						error))
+						error)))
 					sys.stderr.flush()
 
 				raise SQLError(stmt,error)
@@ -208,7 +208,7 @@ class Connection:
 	def reconnecting(self,f):
 		while True:
 			try:
-				return f()	
+				return f()
 			except SQLError as e:
 				if e['connection'].startswith(b'server closed the connection unexpectedly'):
 					self.reconnect()
@@ -343,15 +343,14 @@ class Connection:
 			import sys,time
 			out = self.out if self.out else sys.stdout
 			out.write(str(time.time())+' '+fullstmt)
-			out.write(' '.join((':',)+args)+'\n')
+			out.write(' '.join((':',)+tuple(map(repr,args)))+'\n')
 			out.flush()
 		@self.reconnecting
 		def _():
 			name = self.prepareds.get(stmt)
 			if name is None:
 				types = makederp(ctypes.c_void_p,(None,)*len(args))
-				if not stmt in self.executedBefore:
-					name = anonstatement()
+				def reallyexecute(name):
 					result = interface.prepare(raw,
 																		 name.encode('utf-8'),
 																		 stmt.encode('utf-8'),
@@ -359,6 +358,17 @@ class Connection:
 																		 types)
 					Result(self,raw,result,fullstmt,args) # needed to catch/format errors
 					self.prepareds[stmt] = Prepared(name)
+				if not stmt in self.executedBefore:
+					while True:
+						name = anonstatement()
+						try:
+							reallyexecute()
+							break
+						except SQLError as e:
+							if 'prepared statement "'+name+'" already exists' in e.info['connection']:
+								print('retrying creating the prepared statement...')
+								time.sleep(1)
+							else: raise
 				else:
 					result = interface.executeOnce(raw,
 																				 stmt.encode('utf-8'),
@@ -370,7 +380,7 @@ class Connection:
 																				 0);
 					self.status = interface.resultStatus(result)
 					self.result = Result(self,raw,result,fullstmt,args)
-					
+
 					if len(stmt) > 14:
 						self.executedBefore.add(stmt)
 						return self.result
