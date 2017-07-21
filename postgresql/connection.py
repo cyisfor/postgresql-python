@@ -21,13 +21,15 @@ class SQLError(IOError):
 	def __getitem__(self,n):
 		return self.info[n]
 
+E = interface.ExecStatusType
 OKstatuses = set((
-	interface.PGRES_COMMAND_OK,
-	interface.PGRES_TUPLES_OK,
-	interface.PGRES_COPY_OUT,
-	interface.PGRES_COPY_IN,
-	interface.PGRES_COPY_BOTH,
-	interface.PGRES_SINGLE_TUPLE))
+	E.COMMAND_OK,
+	E.TUPLES_OK,
+	E.COPY_OUT,
+	E.COPY_IN,
+	E.COPY_BOTH,
+	E.SINGLE_TUPLE))
+del E
 
 def parseDate(result):
 	try:
