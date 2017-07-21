@@ -78,14 +78,18 @@ def generate():
 		if name and name[0]=='_': continue
 		defines[name] = value
 	pid.wait()
+	def myrepr(v):
+		if isinstance(v,str):
+			if v[0] == '"' or v[0] == "'": return v
+		return repr(v)
 	with open("temp","wt") as out:
 		for ename,values in sorted(enums.items()):
 			out.write("class "+ename+":"+"\n")
 			for n,v in sorted(values.items()):
 				n = n.rsplit("_",1)[-1]
-				out.write('\t'+n+' = '+repr(v)+'\n')
+				out.write('\t'+n+' = '+myrepr(v)+'\n')
 		for n,v in sorted(defines.items()):
-			out.write(n + " = " + repr(v) + "\n")
+			out.write(n + " = " + myrepr(v) + "\n")
 	raise SystemExit
 
 try:
