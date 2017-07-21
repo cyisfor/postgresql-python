@@ -61,15 +61,24 @@ def generate():
 	pid.stdin.write("#include <libpq-fe.h>".encode())
 	pid.stdin.close()
 	defines = {}
+	def badname(name):
+		if not name: return True
+		if not name.startswith('PG_'): return True
+		if '(' in name: return True
+		if name and name[0]=='_': return True
+		return False
+
 	for line in pid.stdout:
 		line = line.decode('utf-8').rstrip()
 		try:
 			define,name,value = line.split(" ",2)
+			if badname(name): continue
 		except ValueError:
 			define,name = line.split(" ",1)
+			if badname(name): continue
 			value = True
 		else:
-			if not name.startswith('PG_'): continue
+
 			if value[0] == '(':
 				value = value[1:-1]
 			if value.startswith("0x"):
@@ -80,9 +89,6 @@ def generate():
 				except ValueError:
 					try: value = float(value)
 					except ValueError: pass
-		if not name: continue
-		if '(' in name: continue
-		if name and name[0]=='_': continue
 		defines[name] = value
 	pid.wait()
 	def myrepr(v):
