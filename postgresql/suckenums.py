@@ -32,7 +32,9 @@ def generate():
 	ename = None
 	lines = (l.strip() for l in code.split("\n"))
 	lines = (l for l in lines if l)
-	for line in lines:
+	while True:
+		try: line = next(lines)
+		except StopIteration: break # python sucks
 		if mode == 0:
 
 			if line == "typedef enum":
@@ -111,7 +113,7 @@ def generate():
 
 try:
 	import suckenums2
-except ImportError:
+except (ImportError,SyntaxError):
 	generate()
 	import suckenums2
 
