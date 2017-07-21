@@ -41,9 +41,7 @@ def generate():
 				derp = next(lines)
 				assert derp == '{'
 				mode = 1
-				print("mode 1",next(lines))
 		elif mode == 1:
-			print("lineee ",line)
 			if line[0] == '}':
 				if ename is None:
 					ename = line[2:-1] #} space name semicolon
@@ -106,7 +104,6 @@ def generate():
 			out.write("class "+ename+":"+"\n")
 			values = list(values.items())
 			values.sort(key=lambda p: p[0])
-			print(values)
 			for n,v in values:
 				out.write('\t'+n+' = '+myrepr(v)+'\n')
 		for n,v in sorted(defines.items()):
