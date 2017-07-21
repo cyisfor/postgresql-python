@@ -98,7 +98,9 @@ def generate():
 	with open("temp","wt") as out:
 		for ename,values in sorted(enums.items()):
 			out.write("class "+ename+":"+"\n")
-			for n,v in sorted(values.items()):
+			values = list(values)
+			values.sort(key=lambda p: p[0])
+			for n,v in values:
 				n = n.rsplit("_",1)[-1]
 				out.write('\t'+n+' = '+myrepr(v)+'\n')
 		for n,v in sorted(defines.items()):
