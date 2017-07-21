@@ -52,6 +52,7 @@ def generate():
 				if '=' in name:
 					name,val = name.split('=')
 					value = int(val)
+				name = name.rsplit("_",1)[-1]
 				values[name] = value
 				value += 1
 
@@ -98,14 +99,15 @@ def generate():
 	with open("temp","wt") as out:
 		for ename,values in sorted(enums.items()):
 			out.write("class "+ename+":"+"\n")
-			values = list(values)
+			values = list(values.items())
 			values.sort(key=lambda p: p[0])
+			print(values)
 			for n,v in values:
-				n = n.rsplit("_",1)[-1]
 				out.write('\t'+n+' = '+myrepr(v)+'\n')
 		for n,v in sorted(defines.items()):
 			out.write(n + " = " + myrepr(v) + "\n")
-	raise SystemExit
+	import os
+	os.rename("temp","suckenums2.py")
 
 try:
 	import suckenums2
