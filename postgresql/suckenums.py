@@ -69,6 +69,7 @@ def generate():
 			define,name = line.split(" ",1)
 			value = True
 		else:
+			if not name.startswith('PG_'): continue
 			if value[0] == '(':
 				value = value[1:-1]
 			if value.startswith("0x"):
