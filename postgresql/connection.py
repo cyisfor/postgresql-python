@@ -350,7 +350,8 @@ class Connection:
 			name = self.prepareds.get(stmt)
 			if name is None:
 				types = makederp(ctypes.c_void_p,(None,)*len(args))
-				def reallyexecute(name):
+				def reallyprepare(name):
+					nonlocal result
 					result = interface.prepare(raw,
 																		 name.encode('utf-8'),
 																		 stmt.encode('utf-8'),
@@ -358,15 +359,16 @@ class Connection:
 																		 types)
 					Result(self,raw,result,fullstmt,args) # needed to catch/format errors
 					self.prepareds[stmt] = Prepared(name)
-				if not stmt in self.executedBefore:
+				if stmt in self.executedBefore:
+					# prepare if it's executed twice, otherwise don't bother
 					while True:
 						name = anonstatement()
 						try:
-							reallyexecute()
+							reallyprepare(name)
 							break
 						except SQLError as e:
-							if 'prepared statement "'+name+'" already exists' in e.info['connection']:
-								print('retrying creating the prepared statement...')
+							if ('prepared statement "'+name+'" already exists').encode() in e.info['connection']:
+								print(name,'already exists. retrying creating the prepared statement...')
 								time.sleep(1)
 							else: raise
 				else:
@@ -381,17 +383,21 @@ class Connection:
 					self.status = interface.resultStatus(result)
 					self.result = Result(self,raw,result,fullstmt,args)
 
-					if len(stmt) > 14:
+					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(stmt)
-						return self.result
-
-			result = interface.execute(raw,
+					return self.result
+			try:
+				result = interface.execute(raw,
 					name.encode('utf-8'),
 					len(args),
 					values,
 					lengths,
 					fmt,
 					0)
+			except SQLError as e:
+				print("ummmm",e)
+				print(dir(e))
+				raise
 			self.status = interface.resultStatus(result)
 			self.result = Result(self,raw,result,fullstmt,args)
 		if self.verbose:
