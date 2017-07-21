@@ -79,11 +79,13 @@ def generate():
 		defines[name] = value
 	pid.wait()
 	with open("temp","wt") as out:
-		for ename,values in enums.items():
+		for ename,values in sorted(enums.items()):
 			out.write("class "+ename+":"+"\n")
-			for n,v in values.items():
+			for n,v in sorted(values.items()):
+				n = n.rsplit("_",1)[-1]
 				out.write('\t'+n+' = '+repr(v)+'\n')
-	pprint(defines)
+		for n,v in sorted(defines.items()):
+			out.write(n + " = " + repr(v) + "\n")
 	raise SystemExit
 
 try:
