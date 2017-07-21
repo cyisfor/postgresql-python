@@ -34,21 +34,22 @@ def generate():
 	lines = (l for l in lines if l)
 	for line in lines:
 		if mode == 0:
-			print(line)
+
 			if line == "typedef enum":
 				assert next(lines) == '{'
 				mode = 1
 		elif mode == 1:
+			print("ummm",repr(line))
 			if line[0] == '}':
-				if name is None:
+				if ename is None:
 					ename = line[2:-1] #} space name semicolon
-					enums[ename] = values
-					ename = None
-					values = {}
-					value = 0
-					mode = 0
+				enums[ename] = values
+				ename = None
+				values = {}
+				value = 0
+				mode = 0
 			else:
-				name = line[:-1] # comma
+				name = line.rstrip(',')
 				if '=' in name:
 					name,val = name.split('=')
 					value = int(val)
