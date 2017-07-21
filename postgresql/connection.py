@@ -394,12 +394,14 @@ class Connection:
 					lengths,
 					fmt,
 					0)
+
+				self.status = interface.resultStatus(result)
+				self.result = Result(self,raw,result,fullstmt,args)
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
+				print(self.status)
 				raise
-			self.status = interface.resultStatus(result)
-			self.result = Result(self,raw,result,fullstmt,args)
 		if self.verbose:
 			self.out.write(str(self.result))
 		return self.result
