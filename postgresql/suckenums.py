@@ -7,11 +7,13 @@ decommentp = re.compile("/\\*(?:[^*]|\\*[^/])*\\*/")
 def decomment(code):
 	return decommentp.sub("",code)
 
-print(decomment("""
+def test_decomment():
+	print(decomment("""
 this is a /*nos a teh*/test of /*
 decommenting *stuff /and other stuff
-*/"""))
-raise SystemExit
+*/
+decommenting/**/ but not decommenting this"""))
+	raise SystemExit
 
 def generate():
 	enums = {}
@@ -22,12 +24,11 @@ def generate():
 	pid = subprocess.Popen(["cpp","-I",place],stdin=subprocess.PIPE,stdout=subprocess.PIPE)
 	pid.stdin.write("#include <libpq-fe.h>".encode())
 	pid.stdin.close()
-	code = decomment(pid.stdin.read())
+	code = decomment(pid.stdin.read().decode('utf-8'))
 	
-
 	mode = 0
-	for line in pid.stdout:
-		line = line.decode('utf-8').strip()
+	for line in code.split("\n"):
+		line = line..strip()
 		line = line.split('/*',1)[0]
 		if not line: continue
 		if mode == 0:
