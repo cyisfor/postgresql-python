@@ -38,9 +38,12 @@ def generate():
 		if mode == 0:
 
 			if line == "typedef enum":
-				assert next(lines) == '{'
+				derp = next(lines)
+				assert derp == '{'
 				mode = 1
+				print("mode 1",next(lines))
 		elif mode == 1:
+			print("lineee ",line)
 			if line[0] == '}':
 				if ename is None:
 					ename = line[2:-1] #} space name semicolon
