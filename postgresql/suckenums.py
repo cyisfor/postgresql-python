@@ -3,16 +3,30 @@ import subprocess
 from itertools import count
 import sys
 
-enums = {}
+decommentp = re.compile("/\\*(?:[^*]|\\*[^/])\\*/").replace("",code)
+def decomment(code):
+	return decommentp.replace("",code)
 
-pid = subprocess.Popen(["pg_config","--includedir"],stdout=subprocess.PIPE)
-place = pid.stdout.read().rstrip()
-pid.wait()
-pid = subprocess.Popen(["cpp","-I",place],stdin=subprocess.PIPE,stdout=subprocess.PIPE)
-pid.stdin.write("#include <libpq-fe.h>".encode())
-pid.stdin.close()
-mode = 0
-for line in pid.stdout:
+print(decomment("""
+this is a /*nos a teh*/test of /*
+decommenting *stuff /and other stuff
+*/"""))
+raise SystemExit
+
+def generate():
+	enums = {}
+
+	pid = subprocess.Popen(["pg_config","--includedir"],stdout=subprocess.PIPE)
+	place = pid.stdout.read().rstrip()
+	pid.wait()
+	pid = subprocess.Popen(["cpp","-I",place],stdin=subprocess.PIPE,stdout=subprocess.PIPE)
+	pid.stdin.write("#include <libpq-fe.h>".encode())
+	pid.stdin.close()
+	code = decomment(pid.stdin.read())
+	
+	print(
+	mode = 0
+	for line in pid.stdout:
     line = line.decode('utf-8').strip()
     line = line.split('/*',1)[0]
     if not line: continue
@@ -85,3 +99,14 @@ for line in pid.stdout:
     defines[name] = value
     setattr(sys.modules[__name__],name,value)
 pid.wait()
+
+
+
+try:
+	import suckenums2
+except ImportError:
+	generate()
+	import suckenums2
+
+import sys
+sys.modules[__name__] = suckenums2
