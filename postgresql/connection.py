@@ -29,7 +29,6 @@ OKstatuses = set((
 	E.COPY_IN,
 	E.COPY_BOTH,
 	E.SINGLE_TUPLE))
-del E
 
 def parseDate(result):
 	try:
@@ -128,7 +127,7 @@ class Result(list):
 						'name': function,
 						}
 			interface.clear(raw)
-			if self.statusId != interface.PGRES_NONFATAL_ERROR:
+			if self.statusId != E.NONFATAL_ERROR:
 				if self.verbose:
 					sys.stderr.write('\n'.join(repr(s) for s in (
 						stmt,
@@ -277,12 +276,12 @@ class Connection:
 		self.reconnect()
 		if need_setup:
 			# but don't setup if we already did!
-			interface.setErrorVerbosity(self.safe.raw,interface.PQERRORS_VERBOSE)
+			interface.setErrorVerbosity(self.safe.raw,interface.Verbosity.VERBOSE)
 			self.setup(self.safe.raw)
 		return self.safe.raw
 	def reconnect(self):
 		boop = False
-		while interface.status(self.safe.raw) != interface.CONNECTION_OK:
+		while interface.status(self.safe.raw) != interface.ConnStatusType.OK:
 			boop = True
 			print("connection bad?")
 			import time
