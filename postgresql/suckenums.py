@@ -55,7 +55,7 @@ def generate():
 				if '=' in name:
 					name,val = name.split('=')
 					value = int(val)
-				name = name.rsplit("_",1)[-1]
+				name = name.split("_",1)[-1]
 				values[name] = value
 				value += 1
 
