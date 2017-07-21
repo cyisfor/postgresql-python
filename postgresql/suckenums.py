@@ -39,7 +39,7 @@ def generate():
 				assert next(lines) == '{'
 				mode = 1
 		elif mode == 1:
-			print("ummm",repr(line))
+
 			if line[0] == '}':
 				if ename is None:
 					ename = line[2:-1] #} space name semicolon
@@ -79,8 +79,12 @@ def generate():
 		if name and name[0]=='_': continue
 		defines[name] = value
 	pid.wait()
-	from pprint import pprint
-	pprint(enums)
+	with open("temp","wt") as out:
+		for ename,values in enums:
+			print("class",ename+":")
+			for n,v in values.items():
+				print('\t',n,'=',repr(v))
+	pprint(defines)
 	raise SystemExit
 
 try:
