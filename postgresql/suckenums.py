@@ -69,10 +69,16 @@ def generate():
 			define,name = line.split(" ",1)
 			value = True
 		else:
-			try: value = int(value)
-			except ValueError:
-				try: value = float(value)
+			if value[0] == '(':
+				value = value[1:-1]
+			if value.startswith("0x"):
+				try: value = int(value[2:],16)
 				except ValueError: pass
+			else:
+				try: value = int(value)
+				except ValueError:
+					try: value = float(value)
+					except ValueError: pass
 		if not name: continue
 		if '(' in name: continue
 		if name and name[0]=='_': continue
