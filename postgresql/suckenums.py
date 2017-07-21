@@ -22,7 +22,7 @@ def generate():
 	pid = subprocess.Popen(["cpp","-I",place],stdin=subprocess.PIPE,stdout=subprocess.PIPE)
 	pid.stdin.write("#include <libpq-fe.h>".encode())
 	pid.stdin.close()
-	code = decomment(pid.stdin.read().decode('utf-8'))
+	code = decomment(pid.stdout.read().decode('utf-8'))
 	pid.wait()
 
 	enums = {}
@@ -32,8 +32,9 @@ def generate():
 	ename = None
 	lines = (l.strip() for l in code.split("\n"))
 	lines = (l for l in lines if l)
-	for line in lines
+	for line in lines:
 		if mode == 0:
+			print(line)
 			if line == "typedef enum":
 				assert next(lines) == '{'
 				mode = 1
@@ -77,6 +78,7 @@ def generate():
 		if name and name[0]=='_': continue
 		defines[name] = value
 	pid.wait()
+	from pprint import pprint
 	pprint(enums)
 	raise SystemExit
 
