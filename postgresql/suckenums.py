@@ -28,8 +28,7 @@ def generate():
 	
 	mode = 0
 	for line in code.split("\n"):
-		line = line..strip()
-		line = line.split('/*',1)[0]
+		line = line.strip()
 		if not line: continue
 		if mode == 0:
 				if 'enum' in line:
