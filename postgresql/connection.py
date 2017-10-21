@@ -90,6 +90,17 @@ def oneresult(results):
 		print("warning: not just one result",res.statusId)
 	return result
 
+def notReentrant(f):
+	busy = False
+	def wrapper(*a,**kw):
+		nonlocal busy
+		assert not busy
+		busy = True
+		try:
+			return f(*a,**kw)
+		finally:
+			busy = False
+
 def parseNumber(result):
 	if result == 'NULL':
 		return None
@@ -100,6 +111,7 @@ def parseNumber(result):
 def getError(raw):
 	error = {}
 	derp = interface.connectionErrorMessage(raw)
+	print("aftea",derp)
 
 	for k,v in (('message',interface.errorMessage(raw)),
 							('connection',derp),
@@ -140,7 +152,8 @@ class Result(list):
 		if resStatus:
 			self.status = resStatus
 		if self.statusId not in OKstatuses:
-			error = getError(raw)
+			error = getError(rawconn)
+
 			interface.freeResult(raw)
 			if self.statusId != E.NONFATAL_ERROR:
 				if self.verbose:
@@ -268,6 +281,7 @@ class Connection:
 			i += 1
 			while interface.isBusy(raw):
 				self.poll.poll()
+				print("b4",raw)
 				consume(raw)
 			result = interface.next(raw)
 			if not result: return
@@ -393,10 +407,8 @@ class Connection:
 		return self.mogrify(i).encode('utf-8')
 	def execute(self,stmt,args=()):
 		return self.executeRaw(self.connect(),stmt,args)
-	executing = False
+	@notReentrant
 	def executeRaw(self,raw,stmt,args=()):
-		assert not self.executing
-		self.executing = True
 		if isinstance(args,dict):
 			# just figured out a neat trick to let %(named)s parameters
 			keys = args.keys()
@@ -467,9 +479,9 @@ class Connection:
 						lengths,
 						fmt,
 						0));
-
+					print("b4")
 					self.result = oneresult(self.results(raw,stmt,args))
-
+					print("after")
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
 					return self.result
@@ -490,7 +502,6 @@ class Connection:
 				raise
 		if self.verbose:
 			self.out.write(str(self.result))
-		self.executing = False
 		return self.result
 	def copy(self,stmt,source=None):
 		@self.reconnecting
