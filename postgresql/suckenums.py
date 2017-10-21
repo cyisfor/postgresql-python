@@ -114,6 +114,7 @@ def generate():
 		for ename,values in sorted(enums.items()):
 			out.write("class "+ename+"(c_int):"+"\n")
 			out.write("\tdef __hash__(self):\n\t\treturn self.value\n")
+			out.write("\tdef __eq__(self,other):\n\t\treturn self.value == other.value\n")
 			out.write("\tdef __str__(self):\n")
 			values = list(values.items())
 			values.sort(key=lambda p: p[0])
