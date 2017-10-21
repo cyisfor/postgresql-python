@@ -502,7 +502,6 @@ class Connection:
 				elif hasattr(source,'readinto'):
 					source = source.readinto
 				yield from self.copyOut(stmt,source,raw)
-		print(gen)
 		return gen
 	def copyIn(self,stmt,raw):
 		buf = ctypes.c_char_p(None)
