@@ -50,6 +50,8 @@ def generate():
 					for n,v in tuple(values.items()):
 						del values[n]
 						values[n[len("POLLING_"):]] = v
+				elif ename.startswith("PG"):
+					ename = ename[2:]
 				enums[ename] = values
 				ename = None
 				values = {}
