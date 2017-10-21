@@ -509,8 +509,6 @@ class Connection:
 					break
 			else:
 				print("um... no copy?")
-			self.result = oneresult(self.results(raw,stmt))
-			yield self.result
 			print("boink",stmt)
 			if 'TO' in stmt:
 				yield from self.copyTo(stmt,raw)
