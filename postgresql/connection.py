@@ -86,8 +86,10 @@ def parseDate(result):
 
 def oneresult(results):
 	result = next(results)
-	for res in results:
+	try:
+		res = next(results)
 		print("warning: not just one result",res.statusId)
+	except StopIteration: pass
 	return result
 
 def notReentrant(f):
@@ -148,7 +150,9 @@ class Result(list):
 		self.decode = conn.decode
 		self.demogrify = conn.demogrify
 		self.statusId = interface.resultStatus(raw)
-		if self.statusId in {E.COPY_OUT,E.COPY_IN}: return
+		if self.statusId in {E.COPY_OUT,E.COPY_IN}:
+			interface.freeResult(raw)
+			return
 		resStatus = interface.resStatus(self.statusId)
 		if resStatus:
 			self.status = resStatus
@@ -164,7 +168,6 @@ class Result(list):
 						self.status,
 						error)))
 					sys.stderr.flush()
-
 				raise SQLError(stmt,error)
 			else:
 				self.error = error
@@ -274,13 +277,16 @@ class Connection:
 						b'server closed the connection unexpectedly'):
 					self.reconnect()
 				else: raise
-	def results(raw,stmt,args=()):
+	def results(self,raw,stmt,args=()):
 		val = self.derp_results(raw,stmt,args)
 		class results:
 			def __enter__(self):
 				return val
 			def __exit__(self,*a):
-				for result in val: pass
+				n = 0
+				for result in val:
+					n += 1
+				print("cleanup results",n)
 		return results()
 	def derp_results(self,raw,stmt,args=()):
 		consume(raw)
