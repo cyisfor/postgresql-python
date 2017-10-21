@@ -18,8 +18,7 @@ def MF(f,restype,*args):
 		f.argtypes = args
 	return f
 
-connect = MF(lib.PQconnectStartParams, connection,
-						 POINTER(c_char_p),
+connect = MF(lib.PQconnectStart, connection,
 						 POINTER(c_char_p),
 						 c_int)
 connectPoll = MF(lib.PQconnectPoll,connection,PostgresPollingStatusType)
@@ -125,3 +124,5 @@ putCopyData = MF(lib.PQputCopyData,c_int,
 								 
 putCopyEnd = lib.PQputCopyEnd
 
+port = MF(lib.PQport,connection,c_char_p)
+name = MF(lib.PQdb,connection,c_char_p)

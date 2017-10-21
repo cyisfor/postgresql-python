@@ -177,7 +177,7 @@ def anonstatement():
 import ctypes
 def cstrize(s):
 	b = s.encode('utf-8')
-	return ctypes.c_char_p(b),b
+	return ctypes.c_char_p(b)
 
 def makederp(typ,args):
 	if not args: return None
@@ -216,19 +216,8 @@ class Connection:
 		if 'params' in params:
 			params.update(params['params'])
 			del params['params']
-		height = len(params)
-		keya = ctypes.c_char_p * (height+1)
-		keya = keya()
-		vala = ctypes.c_char_p * (height+1)
-		vala = vala()
-		self._ctypessuck = []
-		for i,(key,val) in enumerate(params.items()):
-			keya[i],key = cstrize(key)
-			vala[i],val = cstrize(str(val))
-			self._ctypessuck.append((key,val))
-		keya[height] = None
-		vala[height] = None
-		self.conninfo = (keya,vala,1)
+		self._ctypessuck = (" ".join(n+"="+repr(v) for n,v in params.items())).encode("utf-8")
+		self.params = ctypes.c_char_p(self._ctypessuck)
 		self.safe = LocalConn()
 		self.executedBefore = set()
 		self.prepareds = dict()
@@ -306,7 +295,8 @@ class Connection:
 	def connect(self):
 		need_setup = False
 		if self.safe.raw is None:
-			self.safe.raw = interface.connect(*self.conninfo)
+			self.safe.raw = interface.connect(self.params,1)
+			print("um",self._ctypessuck,self.params.value)
 			self.poll = select.poll()
 			sock = interface.socket(self.safe.raw)
 			self.poll.register(sock, select.POLLIN)
@@ -325,6 +315,10 @@ class Connection:
 			print("connection bad?",interface.status(self.safe.raw),getError(self.safe.raw))
 			import time
 			time.sleep(1)
+			print("um",self._ctypessuck,self.params.value,
+						self.safe.raw,
+						interface.db(self.safe.raw),
+						interface.port(self.safe.raw))
 			interface.reset(self.safe.raw)
 		if boop:
 			self.executedBefore = set()
