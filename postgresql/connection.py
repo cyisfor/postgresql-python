@@ -536,13 +536,14 @@ class Connection:
 				consume(raw)
 				continue
 			elif code == -1:
-				# copy TO returns 1 result before (endlessly) and 1 result after (w/ NULL)
-				self.result = oneresult(self.results(raw,stmt))
-				return
+				break
 			elif code == -2:
 				raise SQLError(stmt,getError(raw))
 			else:
 				yield self.decode(ctypes.string_at(buf,code))
+		# copy TO returns 1 result before (endlessly) and 1 result after (w/ NULL)
+		self.result = oneresult(self.results(raw,stmt))
+		return self.result
 	@pollout
 	def copyFrom(self,raw,stmt,source):
 		buf = bytearray(0x1000)
