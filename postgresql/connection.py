@@ -578,5 +578,7 @@ class Connection:
 				if thenRaise:
 					raise error from thenRaise
 				raise error
+		self.result = oneresult(self.results(raw,stmt))
 		if thenRaise is not None:
 			raise thenRaise
+		return self.result
