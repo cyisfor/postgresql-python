@@ -21,7 +21,7 @@ def MF(f,restype,*args):
 connect = MF(lib.PQconnectStart, connection,
 						 c_char_p,
 						 c_int)
-connectPoll = MF(lib.PQconnectPoll,connection,PostgresPollingStatusType)
+connectPoll = MF(lib.PQconnectPoll,PostgresPollingStatusType,connection)
 finish = lib.PQfinish
 reset = lib.PQreset
 ping = lib.PQping

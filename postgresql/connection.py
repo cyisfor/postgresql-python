@@ -320,15 +320,19 @@ class Connection:
 		return self.safe.raw
 	def reconnect(self):
 		boop = False
-		if interface.status(self.safe.raw) == interface.ConnStatusType.BAD:
-			boop = True
-			print("connection bad?",interface.status(self.safe.raw),getError(self.safe.raw))
-			import time
-			time.sleep(1)
-			interface.reset(self.safe.raw)
-			while interface.status(self.safe.raw) != interface.ConnStatusType.OK:
-				self.poll.poll()
-				consume(self.safe.raw)
+		raw = self.safe.raw
+		stat = interface.status(raw)
+		if stat != interface.ConnStatusType.OK:
+			if stat == interface.ConnStatusType.BAD:
+				boop = True
+				print("connection bad?",interface.status(raw),getError(raw))
+				import time
+				time.sleep(1)
+				interface.reset(raw)
+			while interface.status(raw) != interface.ConnStatusType.OK:
+				self.poll.poll(1000)
+				consume(raw)
+				interface.connectPoll(raw)
 		if boop:
 			self.executedBefore = set()
 			self.prepareds = dict()
