@@ -16,7 +16,7 @@ for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
     print(repr(buf))
 
 print('regular select')
-result = c.execute("SELECT * from derp LIMIT 3")
+result = c.execute("SELECT * from derp LIMIT 5")
 print(result.fields)
 print(result.types)
 for row in result:
