@@ -492,7 +492,7 @@ class Connection:
 			self.result = oneresult(self.results(raw,stmt))
 			yield self.result
 			if 'TO' in stmt:
-				return self.copyIn(stmt,raw)
+				yield from self.copyIn(stmt,raw)
 			else:
 				if hasattr(source,'read'):
 					if hasattr(source,'buffer'):
@@ -500,7 +500,7 @@ class Connection:
 					source = source.readinto
 				elif hasattr(source,'readinto'):
 					source = source.readinto
-				return self.copyOut(stmt,source,raw)
+				yield from self.copyOut(stmt,source,raw)
 	def copyIn(self,stmt,raw):
 		buf = ctypes.c_char_p(None)
 		while True:
