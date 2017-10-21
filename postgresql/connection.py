@@ -494,6 +494,7 @@ class Connection:
 				0))
 			print("um")
 			self.result = oneresult(self.results(raw,stmt))
+			print("um")
 			yield self.result
 			print("boink",stmt)
 			if 'TO' in stmt:
