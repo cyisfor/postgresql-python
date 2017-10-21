@@ -533,7 +533,7 @@ class Connection:
 				raise SQLError(stmt,getError(raw))
 			else:
 				print("row",code)
-				yield self.decode(ctypes.string_at(buf[:code]))
+				yield self.decode(ctypes.string_at(buf,code))
 	@pollout
 	def copyFrom(self,stmt,source,raw):
 		buf = bytearray(0x1000)
