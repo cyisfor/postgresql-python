@@ -89,7 +89,9 @@ def oneresult(results):
 	print("doot")
 	try:
 		next(results)
+		print("wee")
 	except StopIteration:
+		print("aahst")
 		return result
 	raise RuntimeError("not just 1 result")
 
