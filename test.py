@@ -10,7 +10,7 @@ print("result:",result)
 
 from io import StringIO
 source = StringIO("23\t'fnord'\n7\t'lucky'\n13\t'unlucky'\n")
-c.copy("COPY derp (id,derp) FROM STDOUT",source)
+c.copy("COPY derp (id,derp) FROM STDIN",source)
 
 print('regular select')
 result = c.execute("SELECT * from derp LIMIT 5")
