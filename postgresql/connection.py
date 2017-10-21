@@ -527,9 +527,6 @@ class Connection:
 				consume(raw)
 				continue
 			elif code == -1:
-				results = self.results(raw,stmt)
-				self.result = oneresult(results)
-				yield self.result
 				return
 			elif code == -2:
 				raise SQLError(stmt,getError(raw))
