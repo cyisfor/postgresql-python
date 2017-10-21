@@ -554,7 +554,8 @@ class Connection:
 				amt = source(buf)
 				if not amt: break
 				while True:
-					res = interface.putCopyData(raw,ctypes.c_char_p.from_buffer(buf),amt)
+					arr = ctypes.c_char * amt
+					res = interface.putCopyData(raw,arr.from_buffer(buf),amt)
 					print("Boop",buf,len(buf),amt)
 					if res == 0:
 						self.poll.poll()
