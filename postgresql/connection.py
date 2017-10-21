@@ -164,8 +164,6 @@ class Result(list):
 		if self.tuplesUpdated:
 			self.tuplesUpdated = int(self.tuplesUpdated)
 
-		print("ummmm",self.statusId)
-
 		self.fields = []
 		self.types = []
 		for c in range(interface.nfields(raw)):
@@ -182,6 +180,8 @@ class Result(list):
 					val = self.demogrify(rawval,self.types[c])
 				row.append(val)
 			self.append(row)
+		print("ummmm",self.statusId)
+
 		interface.freeResult(raw)
 
 stmtcounter = count(0)
