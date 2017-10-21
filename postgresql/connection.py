@@ -116,7 +116,6 @@ def getError(raw):
 				'line': interface.errorField(raw,interface.PG_DIAG_SOURCE_FILE),
 				'name': function,
 			}
-	interface.clear(raw)
 	return error
 
 class Result(list):
@@ -135,6 +134,8 @@ class Result(list):
 			self.status = resStatus
 		if self.statusId not in OKstatuses:
 			error = getError(raw)
+			interface.freeResult(raw)
+				
 			if self.statusId != E.NONFATAL_ERROR:
 				if self.verbose:
 					sys.stderr.write('\n'.join(repr(s) for s in (
@@ -212,8 +213,8 @@ class Connection:
 	savePoint = None
 	verbose = False
 	out = None
-	def derp(self):
-		print("um",self._ctypessuck,self.params.value,
+	def derp(self,i=0):
+		print("um",i,self._ctypessuck,self.params.value,
 					self.safe.raw)
 		print(interface.name(self.safe.raw),
 					interface.port(self.safe.raw))
@@ -222,7 +223,7 @@ class Connection:
 			params.update(params['params'])
 			del params['params']
 		self._ctypessuck = (" ".join(n+"="+repr(v) for n,v in params.items())).encode("utf-8")
-		self.params = ctypes.c_char_p(self._ctypessuck)
+		self.params = ctypes.create_string_buffer(self._ctypessuck)
 		self.safe = LocalConn()
 		self.executedBefore = set()
 		self.prepareds = dict()
@@ -300,7 +301,7 @@ class Connection:
 	def connect(self):
 		need_setup = False
 		if self.safe.raw is None:
-			self.safe.raw = interface.connect(b"",1)
+			self.safe.raw = interface.connect(self.params,1)
 			self.derp()
 			self.poll = select.poll()
 			sock = interface.socket(self.safe.raw)
@@ -317,7 +318,9 @@ class Connection:
 		boop = False
 		while interface.status(self.safe.raw) != interface.ConnStatusType.OK:
 			boop = True
+			self.derp()
 			print("connection bad?",interface.status(self.safe.raw),getError(self.safe.raw))
+			self.derp(2)
 			import time
 			time.sleep(1)
 			self.derp()

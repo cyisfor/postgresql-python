@@ -19,7 +19,7 @@ def MF(f,restype,*args):
 	return f
 
 connect = MF(lib.PQconnectStart, connection,
-						 POINTER(c_char_p),
+						 c_char_p,
 						 c_int)
 connectPoll = MF(lib.PQconnectPoll,connection,PostgresPollingStatusType)
 finish = lib.PQfinish
@@ -104,7 +104,7 @@ connectionErrorMessage = lib.PQerrorMessage
 connectionErrorMessage.restype = ctypes.c_char_p
 errorField = lib.PQresultErrorField
 errorField.restype = ctypes.c_char_p
-clear = lib.PQclear
+freeResult = lib.PQclear
 nfields = lib.PQnfields
 fname = lib.PQfname
 fname.restype = ctypes.c_char_p
