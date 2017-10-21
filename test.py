@@ -21,7 +21,10 @@ for row in result:
     print(row)
 
 print('COPY TO')
+print("to a file, tuples updated:")
 print(c.execute("COPY derp (id,derp) TO '/tmp/derp'").tuplesUpdated)
 for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
     print(repr(buf))
+
+print(c.result.tuplesUpdated)
 
