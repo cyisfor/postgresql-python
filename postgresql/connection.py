@@ -313,7 +313,7 @@ class Connection:
 			self.poll.register(sock, select.POLLIN)
 			while True:
 				res = interface.connectPoll(raw)
-				if res == P.POLLING_OK: break
+				if res == P.OK: break
 				print("connecting...",res)
 				self.poll.poll(1000)
 				
