@@ -143,6 +143,7 @@ class Result(list):
 		resStatus = interface.resStatus(self.statusId)
 		if resStatus:
 			self.status = resStatus
+		print("ummmm",resStatus)
 		if self.statusId not in OKstatuses:
 			error = getError(raw)
 			interface.freeResult(raw)
