@@ -268,6 +268,7 @@ class Connection:
 				self.poll.poll()
 				consume(raw)
 			result = interface.next(raw)
+			print("boink",result)
 			if not result: return
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
