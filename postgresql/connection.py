@@ -274,7 +274,15 @@ class Connection:
 						b'server closed the connection unexpectedly'):
 					self.reconnect()
 				else: raise
-	def results(self,raw,stmt,args=()):
+	def results(raw,stmt,args=()):
+		val = self.derp_results(raw,stmt,args)
+		class results:
+			def __enter__(self):
+				return val
+			def __exit__(self,*a):
+				for result in val: pass
+		return results()
+	def derp_results(self,raw,stmt,args=()):
 		consume(raw)
 		i=0
 		oldresult = None
@@ -453,7 +461,8 @@ class Connection:
 						len(args),
 						types))
 					while True:
-						result = oneresult(self.results(raw,stmt))
+						with self.results(raw,stmt,args) as results:
+							result = oneresult(results)
 						if not result: break
 						print(result)
 					# this is only the result of PREPARATION not executing it
@@ -480,10 +489,11 @@ class Connection:
 						values,
 						lengths,
 						fmt,
-						0));
-					print("b4")
-					self.result = oneresult(self.results(raw,stmt,args))
-					print("after")
+						0))
+					with self.results(raw,stmt,args) as results:
+						print("b4")
+						self.result = oneresult(results)
+						print("after")
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
 					return self.result
@@ -496,7 +506,8 @@ class Connection:
 					lengths,
 					fmt,
 					0))
-				self.result = oneresult(self.results(raw,stmt,args))
+				with self.results(raw,stmt,args) as results:
+					self.result = oneresult(results)
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
@@ -520,12 +531,13 @@ class Connection:
 				None,
 				None,
 				0))
-			for result in self.results(raw,stmt):
-				if result.statusId in {E.COPY_OUT,E.COPY_IN}:
-					break
-			else:
-				print("um... no copy?")
-				return
+			with self.results(raw,stmt) as results:
+				for result in results:
+					if result.statusId in {E.COPY_OUT,E.COPY_IN}:
+						break
+				else:
+					print("um... no copy?")
+					return
 			if result.statusId == E.COPY_OUT:
 				yield from self.copyTo(stmt,raw)
 			else:
@@ -559,7 +571,8 @@ class Connection:
 			else:
 				yield self.decode(ctypes.string_at(buf,code))
 		# copy TO returns 1 result before (endlessly) and 1 result after (w/ NULL)
-		self.result = oneresult(self.results(raw,stmt))
+		with self.results(raw,stmt) as results:
+			self.result = oneresult(results)
 		return self.result
 	@pollout
 	def copyFrom(self,raw,stmt,source):
@@ -592,7 +605,8 @@ class Connection:
 				if thenRaise:
 					raise error from thenRaise
 				raise error
-		self.result = oneresult(self.results(raw,stmt))
+			with self.results(raw,stmt) as results:
+				self.result = oneresult(results)
 		if thenRaise is not None:
 			raise thenRaise
 		return self.result
