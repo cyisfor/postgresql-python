@@ -1,7 +1,8 @@
 import ctypes
 from ctypes.util import find_library
 
-from ctypes import c_int, c_void_p, c_char_p
+from ctypes import c_int, c_long, c_void_p, c_char_p
+from ctypes import POINTER
 
 lib = ctypes.cdll.LoadLibrary(find_library("pq"))
 assert(lib)
@@ -15,7 +16,8 @@ def MF(f,restype,*args):
 	"makefunc"
 	f.restype = restype
 	if args:
-		f.argtypes = args 
+		f.argtypes = args
+	return f
 
 connect = MF(lib.PQconnectdbParams, connection)
 finish = lib.PQfinish
@@ -23,6 +25,8 @@ reset = lib.PQreset
 ping = lib.PQping
 
 class OID(c_long): pass
+
+socket = MF(lib.PQsocket, connection, c_int)
 
 class send:
 	class noprep:
@@ -111,6 +115,8 @@ getCopyData = MF(lib.PQgetCopyData,c_int,
 								 c_int)
 putCopyData = MF(lib.PQputCopyData,c_int,
 								 connection,
+								 c_char_p,
+								 c_int)
 								 
 putCopyEnd = lib.PQputCopyEnd
 from .suckenums import *

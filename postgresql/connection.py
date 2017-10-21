@@ -189,11 +189,11 @@ class LocalConn(threading.local):
 
 def pollout(f):
 	def wrapper(self,raw,*a,**kw):
-		self.poll.modify(raw,select.POLLOUT)
+		self.poll.modify(interface.socket(raw),select.POLLOUT)
 		try:
 			return f(self,raw,*a,**kw)
 		finally:
-			self.poll.modify(raw,select.POLLIN)
+			self.poll.modify(interface.socket(raw),select.POLLIN)
 	return wrapper
 
 
@@ -305,7 +305,8 @@ class Connection:
 		if self.safe.raw is None:
 			self.safe.raw = interface.connect(*self.conninfo)
 			self.poll = select.poll()
-			self.poll.register(self.safe.raw, select.POLLIN)
+			sock = interface.socket(self.safe.raw)
+			self.poll.register(sock, select.POLLIN)
 			# can't setup until we have a good connection...
 			need_setup = True
 		self.reconnect()
