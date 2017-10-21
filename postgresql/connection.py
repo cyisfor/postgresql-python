@@ -530,7 +530,8 @@ class Connection:
 				continue
 			elif code == -1:
 				print("copy DONE")
-				return oneresult(self.results(raw,stmt))
+				yield oneresult(self.results(raw,stmt))
+				return
 			elif code == -2:
 				raise SQLError(stmt,getError(raw))
 			else:
