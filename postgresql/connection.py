@@ -529,6 +529,7 @@ class Connection:
 				consume(raw)
 				continue
 			elif code == -1:
+				print("copy DONE")
 				return
 			elif code == -2:
 				raise SQLError(stmt,getError(raw))
