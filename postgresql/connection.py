@@ -513,9 +513,11 @@ class Connection:
 				if hasattr(source,'read'):
 					if hasattr(source,'buffer'):
 						source = source.buffer
+				if hasattr(source,'readinto'):
 					source = source.readinto
-				elif hasattr(source,'readinto'):
-					source = source.readinto
+				else:
+					help(source)
+					raise SystemExit
 				return self.copyFrom(stmt,source,raw)
 		return gen
 	def copyTo(self,stmt,raw):
