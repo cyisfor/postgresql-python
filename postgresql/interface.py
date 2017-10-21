@@ -61,7 +61,10 @@ class send:
 #execute = lib.PQexecPrepared
 #executeOnce = lib.PQexecParams
 #prepare = lib.PQprepare
-result = c_void_p
+class result(c_void_p):
+	def __getattr__(self,n):
+		print("ummmm",n)
+		return super().__getattr__(n)
 #execute.restype = executeOnce.restype = prepare.restype = result
 
 next = MF(lib.PQgetResult,result,connection)
