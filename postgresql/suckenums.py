@@ -52,6 +52,7 @@ def generate():
 						return n[len("POLLING_"):]
 					else:
 						return n
+				values = dict((fix(n),v) for n,v in values.items())
 				enums[ename] = values
 				ename = None
 				values = {}

@@ -304,7 +304,7 @@ class Connection:
 			return decoder(result)
 		return result
 	def connect(self):
-		C = interface.ConnStatusType
+		P = interface.PostgresPollingStatusType
 		need_setup = False
 		if self.safe.raw is None:
 			raw = self.safe.raw = interface.connect(self.params,1)
@@ -313,7 +313,7 @@ class Connection:
 			self.poll.register(sock, select.POLLIN)
 			while True:
 				res = interface.connectPoll(raw)
-				if res == C.MADE: break
+				if res == P.POLLING_OK: break
 				print("connecting...",res)
 				self.poll.poll(1000)
 				
