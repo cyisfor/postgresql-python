@@ -304,7 +304,7 @@ class Connection:
 			return decoder(result)
 		return result
 	def connect(self):
-		P = interface.PostgresPollingStatusType
+		P = interface.PollingStatus
 		need_setup = False
 		if self.safe.raw is None:
 			raw = self.safe.raw = interface.connect(self.params,1)
