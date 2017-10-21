@@ -86,6 +86,7 @@ def parseDate(result):
 
 def oneresult(results):
 	result = next(results)
+	print("doot")
 	try:
 		next(results)
 	except StopIteration:
