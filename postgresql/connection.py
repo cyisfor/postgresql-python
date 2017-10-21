@@ -87,7 +87,7 @@ def parseDate(result):
 def oneresult(results):
 	result = next(results)
 	for res in results:
-		print("warning: not just one result",res)
+		print("warning: not just one result",res.statusId)
 	return result
 
 def parseNumber(result):
