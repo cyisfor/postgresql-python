@@ -256,7 +256,8 @@ class Connection:
 			try:
 				return f()
 			except SQLError as e:
-				if e['connection'].startswith(b'server closed the connection unexpectedly'):
+				if e['connection'] and e['connection'].startswith(
+						b'server closed the connection unexpectedly'):
 					self.reconnect()
 				else: raise
 	def results(self,raw,stmt,args=()):
@@ -336,11 +337,9 @@ class Connection:
 			self.poll.register(sock, select.POLLIN)
 			while True:
 				res = interface.connectPoll(raw)
-				if res == P.OK: break
 				print("connecting...",res,P.OK,res == P.OK)
-				self.poll.poll(1000)
-				
-				
+				if res == P.OK: break
+				self.poll.poll(1000)				
 			# can't setup until we have a good connection...
 			need_setup = True
 		self.reconnect()
@@ -394,7 +393,10 @@ class Connection:
 		return self.mogrify(i).encode('utf-8')
 	def execute(self,stmt,args=()):
 		return self.executeRaw(self.connect(),stmt,args)
+	executing = False
 	def executeRaw(self,raw,stmt,args=()):
+		assert not self.executing
+		self.executing = True
 		if isinstance(args,dict):
 			# just figured out a neat trick to let %(named)s parameters
 			keys = args.keys()
@@ -488,6 +490,7 @@ class Connection:
 				raise
 		if self.verbose:
 			self.out.write(str(self.result))
+		self.executing = False
 		return self.result
 	def copy(self,stmt,source=None):
 		@self.reconnecting
