@@ -516,8 +516,10 @@ class Connection:
 				if hasattr(source,'readinto'):
 					source = source.readinto
 				else:
-					help(source)
-					raise SystemExit
+					def wrapper(buf,amt):
+						buf[:] = source.read(amt)
+						return len(buf)
+					source = wrapper
 				return self.copyFrom(stmt,source,raw)
 		return gen
 	def copyTo(self,stmt,raw):
