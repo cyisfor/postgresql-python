@@ -257,6 +257,7 @@ class Connection:
 				self.poll.poll()
 				consume(raw)
 			result = interface.next(raw)
+			if not result: return
 			self.status = interface.resultStatus(result)
 			yield Result(self,raw,result,stmt,args)
 	def setup(self,raw):
