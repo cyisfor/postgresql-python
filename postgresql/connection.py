@@ -266,6 +266,7 @@ class Connection:
 			if not result: return
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
+			yield result
 	def setup(self,raw):
 		if self.specialDecoders: return
 		self.specialDecoders = {}
