@@ -479,7 +479,7 @@ class Connection:
 	def copy(self,stmt,source=None):
 		raw = self.connect()
 		@self.reconnecting
-		def _():
+		def gen():
 			self.checkOne(interface.send.noprep.query(
 				raw,
 				stmt.encode('utf-8'),
@@ -502,6 +502,8 @@ class Connection:
 				elif hasattr(source,'readinto'):
 					source = source.readinto
 				yield from self.copyOut(stmt,source,raw)
+		print(gen)
+		return gen
 	def copyIn(self,stmt,raw):
 		buf = ctypes.c_char_p(None)
 		while True:
