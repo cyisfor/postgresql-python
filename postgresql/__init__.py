@@ -8,7 +8,12 @@ class stagetwo:
 		from . import init
 		import sys
 		sys.modules[__name__] = init
+		return init
 	def __getattr__(self,n):
 		#print("ey?",n)
+		if n == 'Connection':
+			# triggered!
+			init = self()
+			return init.Connection
 		return getattr(mod,n)
 sys.modules[__name__] = stagetwo()
