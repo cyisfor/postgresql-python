@@ -91,15 +91,16 @@ def oneresult(results):
 	return result
 
 def notReentrant(f):
-	busy = False
-	def wrapper(*a,**kw):
-		nonlocal busy
-		assert not busy
-		busy = True
+	def wrapper(self,*a,**kw):
+		assert not self.busy, (f,a,kw)
+		print("busy",f)
+		self.busy = True
 		try:
-			return f(*a,**kw)
+			return f(self,*a,**kw)
 		finally:
-			busy = False
+			print("nabusy",f)
+			self.busy = False
+	return wrapper
 
 def parseNumber(result):
 	if result == 'NULL':
@@ -407,6 +408,7 @@ class Connection:
 		return self.mogrify(i).encode('utf-8')
 	def execute(self,stmt,args=()):
 		return self.executeRaw(self.connect(),stmt,args)
+	busy = False
 	@notReentrant
 	def executeRaw(self,raw,stmt,args=()):
 		if isinstance(args,dict):
@@ -503,6 +505,7 @@ class Connection:
 		if self.verbose:
 			self.out.write(str(self.result))
 		return self.result
+	@notReentrant
 	def copy(self,stmt,source=None):
 		@self.reconnecting
 		def gen():
