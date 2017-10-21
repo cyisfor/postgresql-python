@@ -1,10 +1,12 @@
 import ctypes
 from ctypes.util import find_library
 
+from ctypes import c_int, c_void_p, c_char_p
+
 lib = ctypes.cdll.LoadLibrary(find_library("pq"))
 assert(lib)
 
-class connection(ctypes.c_void_p): pass
+class connection(c_void_p): pass
 
 CONNECTION_OK, CONNECTION_BAD = range(2)
 
@@ -20,24 +22,46 @@ finish = lib.PQfinish
 reset = lib.PQreset
 ping = lib.PQping
 
+class OID(c_long): pass
+
 class send:
 	class noprep:
-		opaque_query = MF(lib.PQsendQuery,c_int)
-		query = MF(lib.PQsendQueryParams,c_int)
-	prepare = MF(lib.PQsendPrepare,c_int)
-	query = MF(lib.PQsendQueryPrepared,c_int)
-	describe = MF(lib.PQsendDescribePrepared,c_int)
+		opaque_query = MF(lib.PQsendQuery,c_int,connection,c_char_p)
+		query = MF(lib.PQsendQueryParams,c_int,
+							 connection,
+							 c_char_p,
+							 c_int,
+							 POINTER(OID),
+							 POINTER(c_char_p),
+							 POINTER(c_int),
+							 POINTER(c_int),
+							 c_int)
+	prepare = MF(lib.PQsendPrepare,c_int,
+							 connection,
+							 c_char_p,
+							 c_char_p,
+							 c_int,
+							 POINTER(OID))
+	query = MF(lib.PQsendQueryPrepared,c_int,
+						 connection,
+						 c_char_p,
+						 c_int,
+						 POINTER(c_char_p),
+						 POINTER(c_int),
+						 POINTER(c_int),
+						 c_int)
+	describe = MF(lib.PQsendDescribePrepared,c_int,c_char_p)
 
 #execute = lib.PQexecPrepared
 #executeOnce = lib.PQexecParams
 #prepare = lib.PQprepare
-class result(ctypes.c_void_p): pass
+class result(c_void_p): pass
 #execute.restype = executeOnce.restype = prepare.restype = result
 
-next = MF(lib.PQgetResult,result)
+next = MF(lib.PQgetResult,result,connection)
 
-consume = MF(lib.PQconsumeInput,c_int)
-isBusy = MF(lib.PQisBusy,c_int)
+consume = MF(lib.PQconsumeInput,c_int,connection)
+isBusy = MF(lib.PQisBusy,c_int,connection)
 # call immediately after sending the query
 # nah, the database has to cache these anyway, should use LIMIT to limit results
 # singlerowmode = lib.PQsetSingleRowMode
@@ -47,13 +71,12 @@ class Notify(ctypes.Structure):
 							("pid",c_int),
 							("extra",c_char_p)]
 
-notifies = MF(lib.PQnotifies,POINTER(Notify))
+notifies = MF(lib.PQnotifies,POINTER(Notify),connection)
 
-resultStatus = lib.PQresultStatus
-tuplesUpdated = lib.PQcmdTuples
-tuplesUpdated.restype = ctypes.c_char_p
-resStatus = lib.PQresStatus
-resStatus.restype = ctypes.c_char_p
+resultStatus = MF(lib.PQresultStatus,c_char_p,result)
+tuplesUpdated = MF(lib.PQcmdTuples,c_char_p,result)
+resStatus = MF(lib.PQresStatus,c_char_p,c_int)
+
 def escapeThing(escaper):
     escaper.restype = ctypes.c_void_p
     def run(conn,s):
@@ -82,7 +105,12 @@ getlength = lib.PQgetlength
 getvalue = lib.PQgetvalue
 getvalue.restype = ctypes.c_char_p
 getisnull = lib.PQgetisnull
-getCopyData = lib.PQgetCopyData
-putCopyData = lib.PQputCopyData
+getCopyData = MF(lib.PQgetCopyData,c_int,
+								 connection,
+								 POINTER(c_char_p),
+								 c_int)
+putCopyData = MF(lib.PQputCopyData,c_int,
+								 connection,
+								 
 putCopyEnd = lib.PQputCopyEnd
 from .suckenums import *

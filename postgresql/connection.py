@@ -455,18 +455,18 @@ class Connection:
 				None,
 				None,
 				0))
-			result = self.nextResult(raw,stmt)
-			self.status = interface.resultStatus(result)
-		if 'TO' in stmt:
-			return self.copyIn(stmt,raw)
-		else:
-			if hasattr(source,'read'):
-				if hasattr(source,'buffer'):
-					source = source.buffer
-				source = source.readinto
-			elif hasattr(source,'readinto'):
-				source = source.readinto
-			return self.copyOut(stmt,source,raw)
+			self.result = self.nextResult(raw,stmt)
+			yield self.result
+			if 'TO' in stmt:
+				return self.copyIn(stmt,raw)
+			else:
+				if hasattr(source,'read'):
+					if hasattr(source,'buffer'):
+						source = source.buffer
+					source = source.readinto
+				elif hasattr(source,'readinto'):
+					source = source.readinto
+				return self.copyOut(stmt,source,raw)
 	def copyIn(self,stmt,raw):
 		buf = ctypes.c_char_p(None)
 		while True:
@@ -476,7 +476,7 @@ class Connection:
 				consume(raw)
 				continue
 			elif code == -1:
-				result = self.nextResult(raw,stmt)
+				self.result = self.nextResult(raw,stmt)
 				return
 			elif code == -2:
 				raise SQLError(stmt,getError(raw))
