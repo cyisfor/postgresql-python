@@ -26,7 +26,7 @@ ping = lib.PQping
 
 class OID(c_long): pass
 
-socket = MF(lib.PQsocket, connection, c_int)
+socket = MF(lib.PQsocket, c_int, connection)
 
 class send:
 	class noprep:

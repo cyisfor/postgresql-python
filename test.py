@@ -1,9 +1,9 @@
 from postgresql.connection import Connection
 
-c = Connection(port=5433, dbname='derp')
+c = Connection(dbname='derp')
 
 c.execute("CREATE TEMPORARY TABLE derp(id integer, derp text)")
-
+print("boop")
 result = c.execute("INSERT INTO derp (id,derp) VALUES ($1,$2) RETURNING derp",(42,"answer"))
 print("result:",result)
 

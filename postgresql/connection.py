@@ -93,7 +93,7 @@ def parseNumber(result):
 
 def getError(raw):
 	error = {}
-	derp = interface.connectionErrorMessage(rawconn)
+	derp = interface.connectionErrorMessage(raw)
 
 	for k,v in (('message',interface.errorMessage(raw)),
 							('connection',derp),
@@ -176,7 +176,8 @@ def anonstatement():
 
 import ctypes
 def cstrize(s):
-	return ctypes.c_char_p(s.encode('utf-8'))
+	b = s.encode('utf-8')
+	return ctypes.c_char_p(b),b
 
 def makederp(typ,args):
 	if not args: return None
@@ -220,9 +221,11 @@ class Connection:
 		keya = keya()
 		vala = ctypes.c_char_p * (height+1)
 		vala = vala()
+		self._ctypessuck = []
 		for i,(key,val) in enumerate(params.items()):
-			keya[i] = cstrize(key)
-			vala[i] = cstrize(str(val))
+			keya[i],key = cstrize(key)
+			vala[i],val = cstrize(str(val))
+			self._ctypessuck.append((key,val))
 		keya[height] = None
 		vala[height] = None
 		self.conninfo = (keya,vala,1)
@@ -319,7 +322,7 @@ class Connection:
 		boop = False
 		while interface.status(self.safe.raw) != interface.ConnStatusType.OK:
 			boop = True
-			print("connection bad?")
+			print("connection bad?",interface.status(self.safe.raw),getError(self.safe.raw))
 			import time
 			time.sleep(1)
 			interface.reset(self.safe.raw)
