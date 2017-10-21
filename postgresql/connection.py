@@ -304,12 +304,20 @@ class Connection:
 			return decoder(result)
 		return result
 	def connect(self):
+		C = interface.ConnStatusType
 		need_setup = False
 		if self.safe.raw is None:
-			self.safe.raw = interface.connect(self.params,1)
+			raw = self.safe.raw = interface.connect(self.params,1)
 			self.poll = select.poll()
-			sock = interface.socket(self.safe.raw)
+			sock = interface.socket(raw)
 			self.poll.register(sock, select.POLLIN)
+			while True:
+				res = interface.connectPoll(raw)
+				if res == C.MADE: break
+				print("connecting...",res)
+				self.poll.poll(1000)
+				
+				
 			# can't setup until we have a good connection...
 			need_setup = True
 		self.reconnect()
@@ -322,14 +330,15 @@ class Connection:
 		boop = False
 		raw = self.safe.raw
 		stat = interface.status(raw)
-		if stat != interface.ConnStatusType.OK:
-			if stat == interface.ConnStatusType.BAD:
+		C = interface.ConnStatusType
+		if stat != C.OK:
+			if stat == C.BAD:
 				boop = True
 				print("connection bad?",interface.status(raw),getError(raw))
 				import time
 				time.sleep(1)
 				interface.reset(raw)
-			while interface.status(raw) != interface.ConnStatusType.OK:
+			while not interface.status(raw) not in {C.OK,C.MADE}:
 				self.poll.poll(1000)
 				consume(raw)
 				interface.connectPoll(raw)
