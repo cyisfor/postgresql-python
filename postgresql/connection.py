@@ -85,7 +85,6 @@ def parseDate(result):
 	return result
 
 def oneresult(results):
-	print("um",results)
 	result = next(results)
 	print("doot")
 	try:
@@ -257,6 +256,7 @@ class Connection:
 	def results(self,raw,stmt,args=()):
 		consume(raw)
 		while True:
+			print("um")
 			while interface.isBusy(raw):
 				self.poll.poll()
 				consume(raw)
