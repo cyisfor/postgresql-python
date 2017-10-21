@@ -88,8 +88,8 @@ def oneresult(results):
 	result = next(results)
 	print("doot")
 	try:
-		next(results)
-		print("wee")
+		res = next(results)
+		print("wee",res)
 	except StopIteration:
 		print("aahst")
 		return result
