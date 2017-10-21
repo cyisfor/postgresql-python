@@ -45,13 +45,11 @@ def generate():
 			if line[0] == '}':
 				if ename is None:
 					ename = line[2:-1] #} space name semicolon
-				def fix(n):
-					nonlocal ename
-					if ename == "PostgresPollingStatusType":
-						ename = "PollingStatus"
-						return n[len("POLLING_"):]
-					else:
-						return n
+				if ename == "PostgresPollingStatusType":
+					ename = "PollingStatus"
+					for n,v in values.items():
+						del values[n]
+						values[n[len("POLLING_"):]] = v
 				values = dict((fix(n),v) for n,v in values.items())
 				enums[ename] = values
 				ename = None
