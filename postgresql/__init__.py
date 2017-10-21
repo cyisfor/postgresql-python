@@ -9,6 +9,6 @@ class stagetwo:
 		import sys
 		sys.modules[__name__] = init
 	def __getattr__(self,n):
-		print("ey?",n)
+		#print("ey?",n)
 		return getattr(mod,n)
 sys.modules[__name__] = stagetwo()
