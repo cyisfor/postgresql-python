@@ -167,9 +167,9 @@ class Result(list):
 		self.fields = []
 		self.types = []
 		for c in range(interface.nfields(raw)):
+			print("ummmm",self.statusId)
 			self.fields.append(self.decode(ctypes.string_at(interface.fname(raw,c))))
 			self.types.append(int(interface.ftype(raw,c)))
-		print("ummmm",self.statusId)
 		for r in range(interface.ntuples(raw)):
 			row = list()
 			for c in range(interface.nfields(raw)):
