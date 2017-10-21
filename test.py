@@ -19,6 +19,6 @@ for row in result:
     print(row)
 
 print('COPY TO')
-for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
+for buf in c.copy("COPY derp (id,derp) TO 'derp'"):
     print(repr(buf))
 
