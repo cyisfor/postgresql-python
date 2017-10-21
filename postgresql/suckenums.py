@@ -110,7 +110,7 @@ def generate():
 			out.write("\t\tval = self.value\n")
 			for n,v in values:
 				out.write('\t\tif val == '+ename+'.'+n+':\n\t\t\treturn '+repr(
-					ename+"."+n + "(" + myrepr(v) + ")")+"\n")
+					n + "(" + myrepr(v) + ")")+"\n")
 			
 			for n,v in values:
 				out.write('\t'+n+' = '+myrepr(v)+'\n')
