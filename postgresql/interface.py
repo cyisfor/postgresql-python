@@ -63,7 +63,7 @@ class send:
 #prepare = lib.PQprepare
 class result(c_void_p):
 	def __repr__(self):
-		return c_void_p.__repr__(self)
+		return repr(self.value)
 	def __getattr__(self,n):
 		print("ummmm",n)
 		return super().__getattr__(n)
