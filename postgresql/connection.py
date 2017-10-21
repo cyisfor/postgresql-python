@@ -560,6 +560,7 @@ class Connection:
 						self.poll.poll()
 					elif res == 1:
 						print("Copy from done")
+						return oneresult(self.results(raw,stmt))
 						break
 					else:
 						raise SQLError(stmt,getError(raw))
