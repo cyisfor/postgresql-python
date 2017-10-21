@@ -142,7 +142,6 @@ class Result(list):
 		if self.statusId not in OKstatuses:
 			error = getError(raw)
 			interface.freeResult(raw)
-			print(self.statusId)	
 			if self.statusId != E.NONFATAL_ERROR:
 				if self.verbose:
 					sys.stderr.write('\n'.join(repr(s) for s in (
@@ -263,14 +262,12 @@ class Connection:
 		i=0
 		oldresult = None
 		while True:
-			print("um",i)
 			i += 1
 			while interface.isBusy(raw):
 				self.poll.poll()
 				consume(raw)
 			result = interface.next(raw)
 			if not result: return
-			print(interface.resultStatus(result))
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
 			yield result
