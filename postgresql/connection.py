@@ -509,7 +509,7 @@ class Connection:
 					break
 			else:
 				print("um... no copy?")
-			if 'TO' in stmt:
+			if result.statusId == E.COPY_OUT:
 				yield from self.copyTo(stmt,raw)
 			else:
 				if hasattr(source,'read'):
