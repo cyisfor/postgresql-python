@@ -9,8 +9,7 @@ assert(lib)
 
 class connection(c_void_p): pass
 
-CONNECTION_OK, CONNECTION_BAD = range(2)
-
+from .suckenums import *
 
 def MF(f,restype,*args):
 	"makefunc"
@@ -19,7 +18,11 @@ def MF(f,restype,*args):
 		f.argtypes = args
 	return f
 
-connect = MF(lib.PQconnectdbParams, connection)
+connect = MF(lib.PQconnectStartParams, connection,
+						 POINTER(c_char_p),
+						 POINTER(c_char_p),
+						 c_int)
+connectPoll = MF(lib.PQconnectPoll,connection,PostgresPollingStatusType)
 finish = lib.PQfinish
 reset = lib.PQreset
 ping = lib.PQping
@@ -77,9 +80,9 @@ class Notify(ctypes.Structure):
 
 notifies = MF(lib.PQnotifies,POINTER(Notify),connection)
 
-resultStatus = MF(lib.PQresultStatus,c_char_p,result)
+resultStatus = MF(lib.PQresultStatus,ExecStatusType,result)
 tuplesUpdated = MF(lib.PQcmdTuples,c_char_p,result)
-resStatus = MF(lib.PQresStatus,c_char_p,c_int)
+resStatus = MF(lib.PQresStatus,c_char_p,ExecStatusType)
 
 def escapeThing(escaper):
     escaper.restype = ctypes.c_void_p
@@ -92,7 +95,9 @@ def escapeThing(escaper):
 ftype = lib.PQftype
 escapeLiteral = escapeThing(lib.PQescapeLiteral)
 escapeIdentifier = escapeThing(lib.PQescapeIdentifier)
-setErrorVerbosity = lib.PQsetErrorVerbosity
+setErrorVerbosity = MF(lib.PQsetErrorVerbosity,PGVerbosity,
+											 connection,
+											 PGVerbosity)
 status = lib.PQstatus
 errorMessage = lib.PQresultErrorMessage
 errorMessage.restype = ctypes.c_char_p
@@ -119,4 +124,4 @@ putCopyData = MF(lib.PQputCopyData,c_int,
 								 c_int)
 								 
 putCopyEnd = lib.PQputCopyEnd
-from .suckenums import *
+

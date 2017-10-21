@@ -100,8 +100,9 @@ def generate():
 			if v[0] == '"' or v[0] == "'": return v
 		return repr(v)
 	with open("temp","wt") as out:
+		out.write("from ctypes import c_int\n")
 		for ename,values in sorted(enums.items()):
-			out.write("class "+ename+":"+"\n")
+			out.write("class "+ename+"(c_int):"+"\n")
 			values = list(values.items())
 			values.sort(key=lambda p: p[0])
 			for n,v in values:
