@@ -21,7 +21,7 @@ def MF(f,restype,*args):
 connect = MF(lib.PQconnectStart, connection,
 						 c_char_p,
 						 c_int)
-connectPoll = MF(lib.PQconnectPoll,PostgresPollingStatusType,connection)
+connectPoll = MF(lib.PQconnectPoll,PollingStatus,connection)
 finish = lib.PQfinish
 reset = lib.PQreset
 ping = lib.PQping
@@ -79,9 +79,9 @@ class Notify(ctypes.Structure):
 
 notifies = MF(lib.PQnotifies,POINTER(Notify),connection)
 
-resultStatus = MF(lib.PQresultStatus,ExecStatusType,result)
+resultStatus = MF(lib.PQresultStatus,ExecStatus,result)
 tuplesUpdated = MF(lib.PQcmdTuples,c_char_p,result)
-resStatus = MF(lib.PQresStatus,c_char_p,ExecStatusType)
+resStatus = MF(lib.PQresStatus,c_char_p,ExecStatus)
 
 def escapeThing(escaper):
     escaper.restype = ctypes.c_void_p
@@ -94,9 +94,9 @@ def escapeThing(escaper):
 ftype = lib.PQftype
 escapeLiteral = escapeThing(lib.PQescapeLiteral)
 escapeIdentifier = escapeThing(lib.PQescapeIdentifier)
-setErrorVerbosity = MF(lib.PQsetErrorVerbosity,PGVerbosity,
+setErrorVerbosity = MF(lib.PQsetErrorVerbosity,Verbosity,
 											 connection,
-											 PGVerbosity)
+											 Verbosity)
 status = lib.PQstatus
 errorMessage = lib.PQresultErrorMessage
 errorMessage.restype = ctypes.c_char_p
