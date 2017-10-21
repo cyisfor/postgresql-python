@@ -505,7 +505,7 @@ class Connection:
 				0))
 			print("um")
 			for result in self.results:
-				if result.statusId in {interface.COPY_OUT,interface.COPY_IN}:
+				if result.statusId in {E.COPY_OUT,E.COPY_IN}:
 					break
 			else:
 				print("um... no copy?")
