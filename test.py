@@ -11,7 +11,7 @@ from io import StringIO
 source = StringIO("23\t'fnord'\n7\t'lucky'\n13\t'unlucky'\n")
 c.copy("COPY derp (id,derp) FROM STDOUT",source)
 
-print('COPY OUT')
+print('COPY TO')
 for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
     print(repr(buf))
 
