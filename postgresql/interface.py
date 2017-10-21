@@ -13,6 +13,23 @@ connect.restype = connection
 finish = lib.PQfinish
 reset = lib.PQreset
 ping = lib.PQping
+
+class send:
+	class noprep:
+		opaque_query = lib.PQsendQuery
+		query = lib.PQsendQueryParams
+	prepare = lib.PQsendPrepare
+	query = lib.PQsendQueryPrepared
+	describe = lib.PQsendDescribePrepared
+next = lib.PQgetResult
+consume = lib.PQconsumeInput
+busy = lib.PQisBusy
+# call immediately after sending the query
+# nah, the database has to cache these anyway, should use LIMIT to limit results
+# singlerowmode = lib.PQsetSingleRowMode
+
+notifies = lib.PQnotifies
+
 execute = lib.PQexecPrepared
 executeOnce = lib.PQexecParams
 prepare = lib.PQprepare
