@@ -168,7 +168,7 @@ class Result(list):
 					val = self.demogrify(rawval,self.types[c])
 				row.append(val)
 			self.append(row)
-		interface.clear(raw)
+		interface.freeResult(raw)
 
 stmtcounter = count(0)
 
