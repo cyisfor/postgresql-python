@@ -314,7 +314,7 @@ class Connection:
 			while True:
 				res = interface.connectPoll(raw)
 				if res == P.OK: break
-				print("connecting...",res)
+				print("connecting...",res,P.OK)
 				self.poll.poll(1000)
 				
 				
