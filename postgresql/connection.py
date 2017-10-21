@@ -556,7 +556,6 @@ class Connection:
 				while True:
 					arr = ctypes.c_char * amt
 					res = interface.putCopyData(raw,arr.from_buffer(buf),amt)
-					print("Boop",buf,len(buf),amt)
 					if res == 0:
 						self.poll.poll()
 					elif res == 1:
