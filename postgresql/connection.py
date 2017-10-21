@@ -497,7 +497,7 @@ class Connection:
 			yield self.result
 			print("boink",stmt)
 			if 'TO' in stmt:
-				yield from self.copyIn(stmt,raw)
+				yield from self.copyTo(stmt,raw)
 			else:
 				if hasattr(source,'read'):
 					if hasattr(source,'buffer'):
@@ -505,9 +505,9 @@ class Connection:
 					source = source.readinto
 				elif hasattr(source,'readinto'):
 					source = source.readinto
-				yield from self.copyOut(stmt,source,raw)
+				yield from self.copyFrom(stmt,source,raw)
 		return gen
-	def copyIn(self,stmt,raw):
+	def copyTo(self,stmt,raw):
 		buf = ctypes.c_char_p(None)
 		while True:
 			code = interface.getCopyData(raw,ctypes.byref(buf),1)
@@ -525,7 +525,7 @@ class Connection:
 			else:
 				yield self.decode(ctypes.string_at(buf))
 	@pollout
-	def copyOut(self,stmt,source,raw):
+	def copyFrom(self,stmt,source,raw):
 		buf = bytearray(0x1000)
 		thenRaise = None
 		while True:
