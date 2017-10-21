@@ -242,14 +242,15 @@ class Connection:
 				if e['connection'].startswith(b'server closed the connection unexpectedly'):
 					self.reconnect()
 				else: raise
-	def nextResult(self,raw,stmt,args=()):
+	def results(self,raw,stmt,args=()):
 		consume(raw)
-		while interface.isBusy(raw):
-			self.poll.poll()
-			consume(raw)
-		result = interface.next(raw)
-		self.status = interface.resultStatus(result)
-		return Result(self,raw,result,stmt,args) 
+		while True:
+			while interface.isBusy(raw):
+				self.poll.poll()
+				consume(raw)
+			result = interface.next(raw)
+			self.status = interface.resultStatus(result)
+			yield Result(self,raw,result,stmt,args)
 	def setup(self,raw):
 		if self.specialDecoders: return
 		self.specialDecoders = {}
@@ -413,7 +414,10 @@ class Connection:
 						stmt.encode('utf-8'),
 						len(args),
 						types))
-					self.nextResult(raw,stmt)
+					while True:
+						result = next(self.results(raw,stmt))
+						if not result: break
+						print(result)
 					# this is only the result of PREPARATION not executing it
 					prep = Prepared(name)
 					self.prepareds[stmt] = prep
@@ -440,7 +444,7 @@ class Connection:
 						fmt,
 						0));
 
-					self.result = self.nextResult(raw,stmt,args)
+					self.result = next(self.results(raw,stmt,args))
 
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
@@ -454,7 +458,7 @@ class Connection:
 					lengths,
 					fmt,
 					0))
-				self.result = self.nextResult(self.raw,stmt,args)
+				self.result = next(self.results(self.raw,stmt,args))
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
@@ -476,7 +480,7 @@ class Connection:
 				None,
 				None,
 				0))
-			self.result = self.nextResult(raw,stmt)
+			self.result = next(self.results(raw,stmt))
 			yield self.result
 			if 'TO' in stmt:
 				return self.copyIn(stmt,raw)
@@ -497,7 +501,7 @@ class Connection:
 				consume(raw)
 				continue
 			elif code == -1:
-				self.result = self.nextResult(raw,stmt)
+				self.result = next(self.results(raw,stmt))
 				return
 			elif code == -2:
 				raise SQLError(stmt,getError(raw))
