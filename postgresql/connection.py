@@ -270,8 +270,7 @@ class Connection:
 				consume(raw)
 			result = interface.next(raw)
 			if not result: return
-			if oldresult and oldresult.value == result.value: return
-			oldresult = result
+			print(interface.resultStatus(result))
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
 			yield result
