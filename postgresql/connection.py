@@ -330,7 +330,7 @@ class Connection:
 		boop = False
 		raw = self.safe.raw
 		stat = interface.status(raw)
-		C = interface.ConnStatusType
+		C = interface.ConnStatus
 		if stat != C.OK:
 			if stat == C.BAD:
 				boop = True
