@@ -135,7 +135,7 @@ class Result(list):
 		self.decode = conn.decode
 		self.demogrify = conn.demogrify
 		self.statusId = interface.resultStatus(raw)
-		if self.statusId in {interface.COPY_OUT,interface.COPY_IN}: return
+		if self.statusId in {E.COPY_OUT,E.COPY_IN}: return
 		resStatus = interface.resStatus(self.statusId)
 		if resStatus:
 			self.status = resStatus
