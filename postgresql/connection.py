@@ -263,9 +263,9 @@ class Connection:
 				self.poll.poll()
 				consume(raw)
 			result = interface.next(raw)
-			print("um",i,result)
 			if not result: return
 			self.status = interface.resultStatus(result)
+			print("um",i,result)
 			yield Result(self,raw,result,stmt,args)
 	def setup(self,raw):
 		if self.specialDecoders: return
