@@ -104,14 +104,22 @@ def generate():
 		for ename,values in sorted(enums.items()):
 			out.write("class "+ename+"(c_int):"+"\n")
 			out.write("\tdef __hash__(self):\n\t\treturn self.value\n")
+			out.write("\tdef __str__(self):\n")
 			values = list(values.items())
 			values.sort(key=lambda p: p[0])
+			for n,v in values:
+				out.write('\t\tif '+ename+'.'+n+' == self:\n\t\t\treturn '+repr(ename+"."+n)+"\n")
+			
 			for n,v in values:
 				out.write('\t'+n+' = '+myrepr(v)+'\n')
 		for n,v in sorted(defines.items()):
 			out.write(n + " = " + myrepr(v) + "\n")
-	import os
-	os.rename("temp","suckenums2.py")
+	import os,sys
+	print(sys.modules)
+	name = sys.modules[__name__].__file__
+	name = name[:-3]+"2.py"
+	print("yay",name)
+	os.rename("temp",name)
 
 try:
 	import suckenums2
