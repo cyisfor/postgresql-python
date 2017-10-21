@@ -107,8 +107,9 @@ def generate():
 			out.write("\tdef __str__(self):\n")
 			values = list(values.items())
 			values.sort(key=lambda p: p[0])
+			out.write("\t\tval = self.value")
 			for n,v in values:
-				out.write('\t\tif '+val+' == '+ename+'.'+n+':\n\t\t\treturn '+repr(ename+"."+n)+"\n")
+				out.write('\t\tif val == '+ename+'.'+n+':\n\t\t\treturn '+repr(ename+"."+n)+"\n")
 			
 			for n,v in values:
 				out.write('\t'+n+' = '+myrepr(v)+'\n')
