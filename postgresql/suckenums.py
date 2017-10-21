@@ -124,8 +124,11 @@ def generate():
 			
 			for n,v in values:
 				out.write('\t'+n+' = '+myrepr(v)+'\n')
+		out.write("class PG:\n")
 		for n,v in sorted(defines.items()):
-			out.write(n + " = " + myrepr(v) + "\n")
+			if n.startswith("PG_"):
+				n = n[3:]
+			out.write("\t"+n + " = " + myrepr(v) + "\n")
 	import os,sys
 	name = sys.modules[__name__].__file__
 	name = name[:-3]+"2.py"
