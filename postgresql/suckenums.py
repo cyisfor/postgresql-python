@@ -121,10 +121,10 @@ def generate():
 	os.rename("temp",name)
 
 try:
-	import suckenums2
+	from . import suckenums2
 except (ImportError,SyntaxError):
 	generate()
-	import suckenums2
+	from . import suckenums2
 
 import sys
 sys.modules[__name__] = suckenums2
