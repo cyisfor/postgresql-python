@@ -206,11 +206,13 @@ class LocalConn(threading.local):
 
 def pollout(f):
 	def wrapper(self,raw,*a,**kw):
-		self.poll.modify(interface.socket(raw),select.POLLOUT)
+		sock = interface.socket(raw)
+		print(sock,raw)
+		self.poll.modify(sock,select.POLLOUT)
 		try:
 			return f(self,raw,*a,**kw)
 		finally:
-			self.poll.modify(interface.socket(raw),select.POLLIN)
+			self.poll.modify(sock,select.POLLIN)
 	return wrapper
 
 
