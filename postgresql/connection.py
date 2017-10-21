@@ -490,6 +490,7 @@ class Connection:
 	def copy(self,stmt,source=None):
 		@self.reconnecting
 		def gen():
+			nonlocal source
 			raw = self.connect()
 			self.checkOne(interface.send.noprep.query(
 				raw,
