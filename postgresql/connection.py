@@ -524,6 +524,7 @@ class Connection:
 						if hasattr(s,'encode'):
 							s = s.encode('utf-8')
 						buf[:] = s
+						print(buf)
 						return len(buf)
 				return self.copyFrom(raw,stmt,source)
 		return gen
