@@ -520,6 +520,7 @@ class Connection:
 	def copyTo(self,stmt,raw):
 		buf = ctypes.c_char_p(None)
 		while True:
+			print("beep")
 			code = interface.getCopyData(raw,ctypes.byref(buf),1)
 			if code == 0:
 				self.poll.poll()
