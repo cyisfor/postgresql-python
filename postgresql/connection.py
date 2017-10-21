@@ -183,7 +183,7 @@ class Result(list):
 					val = self.demogrify(rawval,self.types[c])
 				row.append(val)
 			self.append(row)
-
+		help(self)
 		interface.freeResult(raw)
 
 stmtcounter = count(0)
@@ -491,9 +491,9 @@ class Connection:
 			self.out.write(str(self.result))
 		return self.result
 	def copy(self,stmt,source=None):
-		raw = self.connect()
 		@self.reconnecting
 		def gen():
+			raw = self.connect()
 			self.checkOne(interface.send.noprep.query(
 				raw,
 				stmt.encode('utf-8'),
