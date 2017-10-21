@@ -239,13 +239,14 @@ class Connection:
 				if e['connection'].startswith(b'server closed the connection unexpectedly'):
 					self.reconnect()
 				else: raise
-	def nextResult(self,raw):
+	def nextResult(self,raw,stmt,args=()):
 		consume(raw)
 		while interface.isBusy(raw):
 			self.poll.poll()
 			consume(raw)
-			
-		return interface.next(raw)	
+		result = interface.next(raw)
+		self.status = interface.resultStatus(result)
+		return Result(self,raw,result,stmt,args) 
 	def setup(self,raw):
 		if self.specialDecoders: return
 		self.specialDecoders = {}
@@ -373,11 +374,10 @@ class Connection:
 		values = makederp(ctypes.c_char_p,args)
 		lengths = makederp(ctypes.c_int,[len(arg) for arg in args])
 		fmt = makederp(ctypes.c_int,(0,)*len(args))
-		fullstmt = stmt
 		if self.verbose:
 			import sys,time
 			out = self.out if self.out else sys.stdout
-			out.write(str(time.time())+' '+fullstmt)
+			out.write(str(time.time())+' '+stmt)
 			out.write(' '.join((':',)+tuple(map(repr,args)))+'\n')
 			out.flush()
 		@self.reconnecting
@@ -392,9 +392,8 @@ class Connection:
 																					stmt.encode('utf-8'),
 																					len(args),
 																					types))
-					result = self.nextResult(raw)
+					self.nextResult(raw,stmt)
 					# this is only the result of PREPARATION not executing it
-					Result(self,raw,result,fullstmt,args) # needed to catch/format errors
 					prep = Prepared(name)
 					self.prepareds[stmt] = prep
 					return prep
@@ -420,10 +419,7 @@ class Connection:
 						fmt,
 						0));
 
-					result = self.nextResult(raw)
-					
-					self.status = interface.resultStatus(result)
-					self.result = Result(self,raw,result,fullstmt,args)
+					self.result = self.nextResult(raw,stmt,args)
 
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
@@ -437,9 +433,7 @@ class Connection:
 					lengths,
 					fmt,
 					0))
-				result = self.nextResult(self.raw)
-				self.status = interface.resultStatus(result)
-				self.result = Result(self,raw,result,fullstmt,args)
+				self.result = self.nextResult(self.raw,stmt,args)
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
@@ -461,7 +455,7 @@ class Connection:
 				None,
 				None,
 				0))
-			result = self.nextResult(raw)
+			result = self.nextResult(raw,stmt)
 			self.status = interface.resultStatus(result)
 		if 'TO' in stmt:
 			return self.copyIn(stmt,raw)
@@ -482,6 +476,7 @@ class Connection:
 				consume(raw)
 				continue
 			elif code == -1:
+				result = self.nextResult(raw,stmt)
 				return
 			elif code == -2:
 				raise SQLError(stmt,getError(raw))

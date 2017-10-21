@@ -8,33 +8,47 @@ class connection(ctypes.c_void_p): pass
 
 CONNECTION_OK, CONNECTION_BAD = range(2)
 
-connect = lib.PQconnectdbParams
-connect.restype = connection
+
+def MF(f,restype,*args):
+	"makefunc"
+	f.restype = restype
+	if args:
+		f.argtypes = args 
+
+connect = MF(lib.PQconnectdbParams, connection)
 finish = lib.PQfinish
 reset = lib.PQreset
 ping = lib.PQping
 
 class send:
 	class noprep:
-		opaque_query = lib.PQsendQuery
-		query = lib.PQsendQueryParams
-	prepare = lib.PQsendPrepare
-	query = lib.PQsendQueryPrepared
-	describe = lib.PQsendDescribePrepared
-next = lib.PQgetResult
-consume = lib.PQconsumeInput
-busy = lib.PQisBusy
+		opaque_query = MF(lib.PQsendQuery,c_int)
+		query = MF(lib.PQsendQueryParams,c_int)
+	prepare = MF(lib.PQsendPrepare,c_int)
+	query = MF(lib.PQsendQueryPrepared,c_int)
+	describe = MF(lib.PQsendDescribePrepared,c_int)
+
+#execute = lib.PQexecPrepared
+#executeOnce = lib.PQexecParams
+#prepare = lib.PQprepare
+class result(ctypes.c_void_p): pass
+#execute.restype = executeOnce.restype = prepare.restype = result
+
+next = MF(lib.PQgetResult,result)
+
+consume = MF(lib.PQconsumeInput,c_int)
+isBusy = MF(lib.PQisBusy,c_int)
 # call immediately after sending the query
 # nah, the database has to cache these anyway, should use LIMIT to limit results
 # singlerowmode = lib.PQsetSingleRowMode
 
-notifies = lib.PQnotifies
+class Notify(ctypes.Structure):
+	_fields_ = [("name",c_char_p),
+							("pid",c_int),
+							("extra",c_char_p)]
 
-execute = lib.PQexecPrepared
-executeOnce = lib.PQexecParams
-prepare = lib.PQprepare
-class result(ctypes.c_void_p): pass
-execute.restype = executeOnce.restype = prepare.restype = result
+notifies = MF(lib.PQnotifies,POINTER(Notify))
+
 resultStatus = lib.PQresultStatus
 tuplesUpdated = lib.PQcmdTuples
 tuplesUpdated.restype = ctypes.c_char_p
