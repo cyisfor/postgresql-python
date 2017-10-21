@@ -505,6 +505,7 @@ class Connection:
 					break
 			else:
 				print("um... no copy?")
+				return
 			if result.statusId == E.COPY_OUT:
 				yield from self.copyTo(stmt,raw)
 			else:
