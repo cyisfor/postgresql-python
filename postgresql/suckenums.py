@@ -115,7 +115,6 @@ def generate():
 		for n,v in sorted(defines.items()):
 			out.write(n + " = " + myrepr(v) + "\n")
 	import os,sys
-	print(sys.modules)
 	name = sys.modules[__name__].__file__
 	name = name[:-3]+"2.py"
 	print("yay",name)
