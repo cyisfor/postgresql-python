@@ -47,10 +47,9 @@ def generate():
 					ename = line[2:-1] #} space name semicolon
 				if ename == "PostgresPollingStatusType":
 					ename = "PollingStatus"
-					for n,v in values.items():
+					for n,v in tuple(values.items()):
 						del values[n]
 						values[n[len("POLLING_"):]] = v
-				values = dict((fix(n),v) for n,v in values.items())
 				enums[ename] = values
 				ename = None
 				values = {}
@@ -116,7 +115,7 @@ def generate():
 			out.write("\t\tval = self.value\n")
 			for n,v in values:
 				out.write('\t\tif val == '+ename+'.'+n+':\n\t\t\treturn '+repr(
-					n + "(" + myrepr(v) + ")")+"\n")
+					ename + "." + n + "(" + myrepr(v) + ")")+"\n")
 			
 			for n,v in values:
 				out.write('\t'+n+' = '+myrepr(v)+'\n')
