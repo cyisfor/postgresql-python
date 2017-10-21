@@ -168,9 +168,15 @@ class Result(list):
 		self.types = []
 		for c in range(interface.nfields(raw)):
 			fname = interface.fname(raw,c)
-			print("ummmm",fname)
-			self.fields.append(self.decode(ctypes.string_at(fname)))
-			self.types.append(int(interface.ftype(raw,c)))
+			if fname is None:
+				self.fields.append(None)
+			else:
+				self.fields.append(self.decode(ctypes.string_at(fname)))
+			ftype = interface.ftype(raw,c)
+			if ftype is None:
+				self.types.append(None)
+			else:
+				self.types.append(int(ftype))
 		for r in range(interface.ntuples(raw)):
 			row = list()
 			for c in range(interface.nfields(raw)):
