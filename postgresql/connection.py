@@ -84,6 +84,14 @@ def parseDate(result):
 	except IndexError: pass
 	return result
 
+def oneresult(results):
+	result = next(results)
+	try:
+		next(results)
+	except StopIteration:
+		return result
+	raise RuntimeError("not just 1 result")
+
 def parseNumber(result):
 	if result == 'NULL':
 		return None
@@ -415,7 +423,7 @@ class Connection:
 						len(args),
 						types))
 					while True:
-						result = next(self.results(raw,stmt))
+						result = oneresult(self.results(raw,stmt))
 						if not result: break
 						print(result)
 					# this is only the result of PREPARATION not executing it
@@ -444,7 +452,7 @@ class Connection:
 						fmt,
 						0));
 
-					self.result = next(self.results(raw,stmt,args))
+					self.result = oneresult(self.results(raw,stmt,args))
 
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
@@ -458,7 +466,7 @@ class Connection:
 					lengths,
 					fmt,
 					0))
-				self.result = next(self.results(self.raw,stmt,args))
+				self.result = oneresult(self.results(self.raw,stmt,args))
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
@@ -480,7 +488,7 @@ class Connection:
 				None,
 				None,
 				0))
-			self.result = next(self.results(raw,stmt))
+			self.result = oneresult(self.results(raw,stmt))
 			yield self.result
 			if 'TO' in stmt:
 				return self.copyIn(stmt,raw)
@@ -501,8 +509,9 @@ class Connection:
 				consume(raw)
 				continue
 			elif code == -1:
-				self.result = next(self.results(raw,stmt))
-				return
+				results = self.results(raw,stmt)
+				self.result = oneresult(results)
+				return self.result
 			elif code == -2:
 				raise SQLError(stmt,getError(raw))
 			else:
