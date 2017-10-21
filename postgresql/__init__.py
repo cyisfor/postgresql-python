@@ -10,7 +10,7 @@ class stagetwo:
 		sys.modules[__name__] = init
 		return init
 	def __getattr__(self,n):
-		#print("ey?",n)
+		print("ey?",n)
 		if n in {'Connection','transaction','retransaction','saved','SQLError'}:
 			# triggered!
 			init = self()
