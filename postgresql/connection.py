@@ -143,7 +143,6 @@ class Result(list):
 		resStatus = interface.resStatus(self.statusId)
 		if resStatus:
 			self.status = resStatus
-		print("ummmm",resStatus,self.statusId)
 		if self.statusId not in OKstatuses:
 			error = getError(raw)
 			interface.freeResult(raw)
@@ -160,10 +159,13 @@ class Result(list):
 				raise SQLError(stmt,error)
 			else:
 				self.error = error
-		else:
-			self.tuplesUpdated = interface.tuplesUpdated(raw)
-			if self.tuplesUpdated:
-				self.tuplesUpdated = int(self.tuplesUpdated)
+			return
+		self.tuplesUpdated = interface.tuplesUpdated(raw)
+		if self.tuplesUpdated:
+			self.tuplesUpdated = int(self.tuplesUpdated)
+
+		print("ummmm",self.statusId)
+
 		self.fields = []
 		self.types = []
 		for c in range(interface.nfields(raw)):
