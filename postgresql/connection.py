@@ -135,11 +135,10 @@ class Result(list):
 		self.decode = conn.decode
 		self.demogrify = conn.demogrify
 		self.statusId = interface.resultStatus(raw)
+		if self.statusId in {interface.COPY_OUT,interface.COPY_IN}: return
 		resStatus = interface.resStatus(self.statusId)
 		if resStatus:
 			self.status = resStatus
-		print(self.status)
-
 		if self.statusId not in OKstatuses:
 			error = getError(raw)
 			interface.freeResult(raw)
@@ -505,6 +504,11 @@ class Connection:
 				None,
 				0))
 			print("um")
+			for result in self.results:
+				if result.statusId in {interface.COPY_OUT,interface.COPY_IN}:
+					break
+			else:
+				print("um... no copy out?")
 			self.result = oneresult(self.results(raw,stmt))
 			yield self.result
 			print("boink",stmt)
