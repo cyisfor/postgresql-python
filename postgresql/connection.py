@@ -568,7 +568,7 @@ class Connection:
 		print("done")
 		while True:
 			res = interface.putCopyEnd(raw,None)
-			print("ended")
+			print("ended",res)
 			if res == 0:
 				self.poll.poll()
 			elif res == 1:
