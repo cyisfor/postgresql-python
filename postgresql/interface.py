@@ -27,7 +27,6 @@ reset = lib.PQreset
 ping = lib.PQping
 
 class OID(c_long): pass
-OID = POINTER(OID)
 
 socket = MF(lib.PQsocket, c_int, connection)
 
@@ -38,7 +37,7 @@ class send:
 							 connection,
 							 c_char_p,
 							 c_int,
-							 OID,
+							 POINTER(OID),
 							 POINTER(c_char_p),
 							 POINTER(c_int),
 							 POINTER(c_int),
@@ -48,7 +47,7 @@ class send:
 							 c_char_p,
 							 c_char_p,
 							 c_int,
-							 OID)
+							 POINTER(OID))
 	query = MF(lib.PQsendQueryPrepared,c_int,
 						 connection,
 						 c_char_p,

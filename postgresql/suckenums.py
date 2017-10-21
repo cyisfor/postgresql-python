@@ -103,6 +103,7 @@ def generate():
 		out.write("from ctypes import c_int\n")
 		for ename,values in sorted(enums.items()):
 			out.write("class "+ename+"(c_int):"+"\n")
+			out.write("\tdef __hash__(self):\n\t\treturn self.value\n")
 			values = list(values.items())
 			values.sort(key=lambda p: p[0])
 			for n,v in values:

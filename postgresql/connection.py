@@ -135,7 +135,7 @@ class Result(list):
 		if self.statusId not in OKstatuses:
 			error = getError(raw)
 			interface.freeResult(raw)
-				
+			print(self.statusId)	
 			if self.statusId != E.NONFATAL_ERROR:
 				if self.verbose:
 					sys.stderr.write('\n'.join(repr(s) for s in (
@@ -182,7 +182,9 @@ def cstrize(s):
 
 def makederp(typ,args):
 	if not args: return None
-	return typ(args)
+	typ *= len(args)
+	val = typ(*args)
+	return val
 
 class LocalConn(threading.local):
 	raw = None
@@ -201,7 +203,8 @@ def consume(raw):
 	interface.consume(raw)
 	while True:
 		notify = interface.notifies(raw)
-		if notify is None: break
+		if not notify: break
+		notify = notify.contents
 		print("notify",notify.name,notify.pid,notify.extra) # meh!
 
 quotes = set((b"'"[0],b'"'[0]))
@@ -213,7 +216,7 @@ class Connection:
 	out = None
 	def checkOne(self,i):
 		if i != 1:
-			raise SQLError("derp",self.getError(self.safe.raw))
+			raise SQLError("derp",getError(self.safe.raw))
 			
 	def derp(self,i=0):
 		print("um",i,self._ctypessuck,self.params.value,
@@ -304,7 +307,6 @@ class Connection:
 		need_setup = False
 		if self.safe.raw is None:
 			self.safe.raw = interface.connect(self.params,1)
-			self.derp()
 			self.poll = select.poll()
 			sock = interface.socket(self.safe.raw)
 			self.poll.register(sock, select.POLLIN)
@@ -318,15 +320,15 @@ class Connection:
 		return self.safe.raw
 	def reconnect(self):
 		boop = False
-		while interface.status(self.safe.raw) != interface.ConnStatusType.OK:
+		if interface.status(self.safe.raw) == interface.ConnStatusType.BAD:
 			boop = True
-			self.derp()
 			print("connection bad?",interface.status(self.safe.raw),getError(self.safe.raw))
-			self.derp(2)
 			import time
 			time.sleep(1)
-			self.derp()
 			interface.reset(self.safe.raw)
+			while interface.status(self.safe.raw) != interface.ConnStatusType.OK:
+				self.poll.poll()
+				consume(self.safe.raw)
 		if boop:
 			self.executedBefore = set()
 			self.prepareds = dict()
