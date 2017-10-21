@@ -522,7 +522,7 @@ class Connection:
 						buf[:] = source.read(amt)
 						return len(buf)
 					source = wrapper
-				return self.copyFrom(stmt,source,raw)
+				return self.copyFrom(raw,stmt,source)
 		return gen
 	def copyTo(self,stmt,raw):
 		buf = ctypes.c_char_p(None)
@@ -543,7 +543,7 @@ class Connection:
 				print("row",code)
 				yield self.decode(ctypes.string_at(buf,code))
 	@pollout
-	def copyFrom(self,stmt,source,raw):
+	def copyFrom(self,raw,stmt,source):
 		buf = bytearray(0x1000)
 		thenRaise = None
 		while True:
