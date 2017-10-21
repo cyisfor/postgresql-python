@@ -512,7 +512,8 @@ class Connection:
 			elif code == -1:
 				results = self.results(raw,stmt)
 				self.result = oneresult(results)
-				return self.result
+				yield self.result
+				return
 			elif code == -2:
 				raise SQLError(stmt,getError(raw))
 			else:
