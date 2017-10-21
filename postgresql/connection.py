@@ -405,8 +405,8 @@ class Connection:
 			name = self.prepareds.get(stmt)
 			if name is None:
 				types = None
-				def reallyprepare(name):
-					name = anonstatement()
+				name = anonstatement()
+				def reallyprepare():
 					self.checkOne(interface.send.prepare(
 						raw,
 						name.encode('utf-8'),
@@ -422,7 +422,7 @@ class Connection:
 					# prepare if it's executed twice, otherwise don't bother
 					while True:
 						try:
-							name = reallyprepare(name)
+							name = reallyprepare()
 							break
 						except SQLError as e:
 							if ('prepared statement "'+name+'" already exists').encode() in e.info['connection']:
