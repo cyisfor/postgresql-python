@@ -255,8 +255,10 @@ class Connection:
 				else: raise
 	def results(self,raw,stmt,args=()):
 		consume(raw)
+		i=0
 		while True:
-			print("um")
+			print("um",i)
+			i += 1
 			while interface.isBusy(raw):
 				self.poll.poll()
 				consume(raw)
