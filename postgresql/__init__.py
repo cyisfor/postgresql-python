@@ -14,6 +14,6 @@ class stagetwo:
 		if n in {'Connection','transaction','retransaction','saved','SQLError'}:
 			# triggered!
 			init = self()
-			return init.Connection
+			return getattr(init,n)
 		return getattr(mod,n)
 sys.modules[__name__] = stagetwo()
