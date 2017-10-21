@@ -518,6 +518,7 @@ class Connection:
 				if hasattr(source,'readinto'):
 					source = source.readinto
 				else:
+					oldsource = source
 					def wrapper(buf):
 						buf[:] = source.read(len(buf))
 						return len(buf)
