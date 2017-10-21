@@ -504,7 +504,7 @@ class Connection:
 				None,
 				0))
 			print("um")
-			for result in self.results:
+			for result in self.results(raw,stmt):
 				if result.statusId in {E.COPY_OUT,E.COPY_IN}:
 					break
 			else:
