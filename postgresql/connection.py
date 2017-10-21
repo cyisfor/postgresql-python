@@ -264,9 +264,8 @@ class Connection:
 				consume(raw)
 			result = interface.next(raw)
 			if not result: return
-			self.status = interface.resultStatus(result)
-			print("um",i,result)
-			yield Result(self,raw,result,stmt,args)
+			result = Result(self,raw,result,stmt,args)
+			self.status = result.statusId
 	def setup(self,raw):
 		if self.specialDecoders: return
 		self.specialDecoders = {}
