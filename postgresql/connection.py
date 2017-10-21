@@ -169,6 +169,7 @@ class Result(list):
 		for c in range(interface.nfields(raw)):
 			self.fields.append(self.decode(ctypes.string_at(interface.fname(raw,c))))
 			self.types.append(int(interface.ftype(raw,c)))
+		print("ummmm",self.statusId)
 		for r in range(interface.ntuples(raw)):
 			row = list()
 			for c in range(interface.nfields(raw)):
@@ -180,7 +181,6 @@ class Result(list):
 					val = self.demogrify(rawval,self.types[c])
 				row.append(val)
 			self.append(row)
-		print("ummmm",self.statusId)
 
 		interface.freeResult(raw)
 
