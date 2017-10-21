@@ -19,6 +19,7 @@ for row in result:
     print(row)
 
 print('COPY TO')
-for buf in c.copy("COPY derp (id,derp) TO '/tmp/derp'"):
+c.execute("COPY derp (id,derp) TO '/tmp/derp'")
+for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
     print(repr(buf))
 
