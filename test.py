@@ -11,13 +11,14 @@ from io import StringIO
 source = StringIO("23\t'fnord'\n7\t'lucky'\n13\t'unlucky'\n")
 c.copy("COPY derp (id,derp) FROM STDOUT",source)
 
-print('COPY TO')
-for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
-    print(repr(buf))
-
 print('regular select')
 result = c.execute("SELECT * from derp LIMIT 5")
 print(result.fields)
 print(result.types)
 for row in result:
     print(row)
+
+print('COPY TO')
+for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
+    print(repr(buf))
+
