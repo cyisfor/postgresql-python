@@ -25,7 +25,7 @@ class SQLError(IOError):
 	def __getitem__(self,n):
 		return self.info[n]
 
-E = interface.ExecStatusType
+E = interface.ExecStatus
 OKstatuses = set((
 	E.COMMAND_OK,
 	E.TUPLES_OK,
@@ -97,23 +97,23 @@ def getError(raw):
 
 	for k,v in (('message',interface.errorMessage(raw)),
 							('connection',derp),
-							('severity',interface.errorField(raw,interface.PG_DIAG_SEVERITY)),
-							('primary',interface.errorField(raw,interface.PG_DIAG_MESSAGE_PRIMARY)),
-							('detail',interface.errorField(raw,interface.PG_DIAG_MESSAGE_DETAIL)),
-							('hint',interface.errorField(raw,interface.PG_DIAG_MESSAGE_HINT)),
-							('context',interface.errorField(raw,interface.PG_DIAG_CONTEXT)),
-							('internal', interface.errorField(raw,interface.PG_DIAG_INTERNAL_QUERY))):
+							('severity',interface.errorField(raw,interface.PG.DIAG_SEVERITY)),
+							('primary',interface.errorField(raw,interface.PG.DIAG_MESSAGE_PRIMARY)),
+							('detail',interface.errorField(raw,interface.PG.DIAG_MESSAGE_DETAIL)),
+							('hint',interface.errorField(raw,interface.PG.DIAG_MESSAGE_HINT)),
+							('context',interface.errorField(raw,interface.PG.DIAG_CONTEXT)),
+							('internal', interface.errorField(raw,interface.PG.DIAG_INTERNAL_QUERY))):
 		error[k] = v
-		position = interface.errorField(raw,interface.PG_DIAG_STATEMENT_POSITION)
+		position = interface.errorField(raw,interface.PG.DIAG_STATEMENT_POSITION)
 		if position:
 			error['position'] = (
 				int(position),
-				int(interface.errorField(raw,interface.PG_DIAG_INTERNAL_POSITION)))
-		function = interface.errorField(raw,interface.PG_DIAG_SOURCE_FUNCTION)
+				int(interface.errorField(raw,interface.PG.DIAG_INTERNAL_POSITION)))
+		function = interface.errorField(raw,interface.PG.DIAG_SOURCE_FUNCTION)
 		if function:
 			error['function'] = {
-				'location': interface.errorField(raw,interface.PG_DIAG_SOURCE_FILE),
-				'line': interface.errorField(raw,interface.PG_DIAG_SOURCE_FILE),
+				'location': interface.errorField(raw,interface.PG.DIAG_SOURCE_FILE),
+				'line': interface.errorField(raw,interface.PG.DIAG_SOURCE_FILE),
 				'name': function,
 			}
 	return error
