@@ -262,8 +262,8 @@ class Connection:
 			while interface.isBusy(raw):
 				self.poll.poll()
 				consume(raw)
-			print("um",i)
 			result = interface.next(raw)
+			print("um",i)
 			if not result: return
 			self.status = interface.resultStatus(result)
 			yield Result(self,raw,result,stmt,args)
