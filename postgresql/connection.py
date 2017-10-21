@@ -86,10 +86,10 @@ def parseDate(result):
 
 def oneresult(results):
 	result = next(results)
-	print("doot")
+	print("doot",result)
 	try:
-		print("wee",result)
 		result = next(results)
+		print("wee",result)
 	except StopIteration:
 		print("aahst")
 		return result
