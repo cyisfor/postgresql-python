@@ -467,7 +467,7 @@ class Connection:
 					lengths,
 					fmt,
 					0))
-				self.result = oneresult(self.results(self.raw,stmt,args))
+				self.result = oneresult(self.results(raw,stmt,args))
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
