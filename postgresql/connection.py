@@ -489,6 +489,7 @@ class Connection:
 				None,
 				None,
 				0))
+			print("um")
 			self.result = oneresult(self.results(raw,stmt))
 			yield self.result
 			print("boink",stmt)
