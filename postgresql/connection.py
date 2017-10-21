@@ -508,7 +508,7 @@ class Connection:
 				if result.statusId in {interface.COPY_OUT,interface.COPY_IN}:
 					break
 			else:
-				print("um... no copy out?")
+				print("um... no copy?")
 			self.result = oneresult(self.results(raw,stmt))
 			yield self.result
 			print("boink",stmt)
