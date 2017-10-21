@@ -563,10 +563,8 @@ class Connection:
 			except Exception as e:
 				thenRaise = e
 				break
-		print("done")
 		while True:
 			res = interface.putCopyEnd(raw,None)
-			print("ended",res)
 			if res == 0:
 				self.poll.poll()
 			elif res == 1:
