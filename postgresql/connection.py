@@ -503,7 +503,6 @@ class Connection:
 			for result in self.results(raw,stmt):
 				if result.statusId in {E.COPY_OUT,E.COPY_IN}:
 					break
-				print("um",result.statusId)
 			else:
 				print("um... no copy?")
 				return
