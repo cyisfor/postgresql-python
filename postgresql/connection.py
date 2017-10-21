@@ -270,7 +270,7 @@ class Connection:
 				consume(raw)
 			result = interface.next(raw)
 			if not result: return
-			if oldresult == result: return
+			if oldresult.value == result.value: return
 			oldresult = result
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
