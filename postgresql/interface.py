@@ -61,7 +61,7 @@ class send:
 #execute = lib.PQexecPrepared
 #executeOnce = lib.PQexecParams
 #prepare = lib.PQprepare
-class result(c_void_p): pass
+result = c_void_p
 #execute.restype = executeOnce.restype = prepare.restype = result
 
 next = MF(lib.PQgetResult,result,connection)
