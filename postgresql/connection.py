@@ -86,14 +86,9 @@ def parseDate(result):
 
 def oneresult(results):
 	result = next(results)
-	print("doot",result)
-	try:
-		result = next(results)
-		print("wee",result)
-	except StopIteration:
-		print("aahst")
-		return result
-	raise RuntimeError("not just 1 result")
+	for res in results:
+		print("warning: not just one result",res)
+	return result
 
 def parseNumber(result):
 	if result == 'NULL':
