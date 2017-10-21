@@ -4,6 +4,10 @@ import datetime
 import traceback
 import time
 
+# TODO: don't hard code this
+# note: gevent can monkey patch this so greenlets work.
+import select
+
 import sys
 
 import threading
@@ -87,6 +91,34 @@ def parseNumber(result):
 		return float(result)
 	return int(result)
 
+def getError(raw):
+	error = {}
+	derp = interface.connectionErrorMessage(rawconn)
+
+	for k,v in (('message',interface.errorMessage(raw)),
+							('connection',derp),
+							('severity',interface.errorField(raw,interface.PG_DIAG_SEVERITY)),
+							('primary',interface.errorField(raw,interface.PG_DIAG_MESSAGE_PRIMARY)),
+							('detail',interface.errorField(raw,interface.PG_DIAG_MESSAGE_DETAIL)),
+							('hint',interface.errorField(raw,interface.PG_DIAG_MESSAGE_HINT)),
+							('context',interface.errorField(raw,interface.PG_DIAG_CONTEXT)),
+							('internal', interface.errorField(raw,interface.PG_DIAG_INTERNAL_QUERY))):
+		error[k] = v
+		position = interface.errorField(raw,interface.PG_DIAG_STATEMENT_POSITION)
+		if position:
+			error['position'] = (
+				int(position),
+				int(interface.errorField(raw,interface.PG_DIAG_INTERNAL_POSITION)))
+		function = interface.errorField(raw,interface.PG_DIAG_SOURCE_FUNCTION)
+		if function:
+			error['function'] = {
+				'location': interface.errorField(raw,interface.PG_DIAG_SOURCE_FILE),
+				'line': interface.errorField(raw,interface.PG_DIAG_SOURCE_FILE),
+				'name': function,
+			}
+	interface.clear(raw)
+	return error
+
 class Result(list):
 	error = None
 	tuplesUpdated = None
@@ -102,31 +134,7 @@ class Result(list):
 		if resStatus:
 			self.status = resStatus
 		if self.statusId not in OKstatuses:
-			error = {}
-			derp = interface.connectionErrorMessage(rawconn)
-
-			for k,v in (('message',interface.errorMessage(raw)),
-									('connection',derp),
-					('severity',interface.errorField(raw,interface.PG_DIAG_SEVERITY)),
-					('primary',interface.errorField(raw,interface.PG_DIAG_MESSAGE_PRIMARY)),
-					('detail',interface.errorField(raw,interface.PG_DIAG_MESSAGE_DETAIL)),
-					('hint',interface.errorField(raw,interface.PG_DIAG_MESSAGE_HINT)),
-					('context',interface.errorField(raw,interface.PG_DIAG_CONTEXT)),
-					('internal', interface.errorField(raw,interface.PG_DIAG_INTERNAL_QUERY))):
-				error[k] = v
-			position = interface.errorField(raw,interface.PG_DIAG_STATEMENT_POSITION)
-			if position:
-				error['position'] = (
-						int(position),
-						int(interface.errorField(raw,interface.PG_DIAG_INTERNAL_POSITION)))
-			function = interface.errorField(raw,interface.PG_DIAG_SOURCE_FUNCTION)
-			if function:
-				error['function'] = {
-						'location': interface.errorField(raw,interface.PG_DIAG_SOURCE_FILE),
-						'line': interface.errorField(raw,interface.PG_DIAG_SOURCE_FILE),
-						'name': function,
-						}
-			interface.clear(raw)
+			error = getError(raw)
 			if self.statusId != E.NONFATAL_ERROR:
 				if self.verbose:
 					sys.stderr.write('\n'.join(repr(s) for s in (
@@ -179,6 +187,23 @@ def makederp(typ,args):
 class LocalConn(threading.local):
 	raw = None
 
+def pollout(f):
+	def wrapper(self,raw,*a,**kw):
+		self.poll.modify(raw,select.POLLOUT)
+		try:
+			return f(self,raw,*a,**kw)
+		finally:
+			self.poll.modify(raw,select.POLLIN)
+	return wrapper
+
+
+def consume(raw):
+	interface.consume(raw)
+	while True:
+		notify = interface.notifies(raw)
+		if notify is None: break
+		print("notify",notify.name,notify.pid,notify.extra) # meh!
+
 quotes = set((b"'"[0],b'"'[0]))
 
 class Connection:
@@ -214,6 +239,13 @@ class Connection:
 				if e['connection'].startswith(b'server closed the connection unexpectedly'):
 					self.reconnect()
 				else: raise
+	def nextResult(self,raw):
+		consume(raw)
+		while interface.isBusy(raw):
+			self.poll.poll()
+			consume(raw)
+			
+		return interface.next(raw)	
 	def setup(self,raw):
 		if self.specialDecoders: return
 		self.specialDecoders = {}
@@ -271,6 +303,8 @@ class Connection:
 		need_setup = False
 		if self.safe.raw is None:
 			self.safe.raw = interface.connect(*self.conninfo)
+			self.poll = select.poll()
+			self.poll.register(self.safe.raw, select.POLLIN)
 			# can't setup until we have a good connection...
 			need_setup = True
 		self.reconnect()
@@ -352,20 +386,23 @@ class Connection:
 			if name is None:
 				types = makederp(ctypes.c_void_p,(None,)*len(args))
 				def reallyprepare(name):
-					nonlocal result
-					result = interface.prepare(raw,
-																		 name.encode('utf-8'),
-																		 stmt.encode('utf-8'),
-																		 len(args),
-																		 types)
+					name = anonstatement()
+					checkOne(interface.send.prepare(raw,
+																					name.encode('utf-8'),
+																					stmt.encode('utf-8'),
+																					len(args),
+																					types))
+					result = self.nextResult(raw)
+					# this is only the result of PREPARATION not executing it
 					Result(self,raw,result,fullstmt,args) # needed to catch/format errors
-					self.prepareds[stmt] = Prepared(name)
-				if stmt in self.executedBefore:
+					prep = Prepared(name)
+					self.prepareds[stmt] = prep
+					return prep
+				if hash(stmt) in self.executedBefore:
 					# prepare if it's executed twice, otherwise don't bother
 					while True:
-						name = anonstatement()
 						try:
-							reallyprepare(name)
+							name = reallyprepare(name)
 							break
 						except SQLError as e:
 							if ('prepared statement "'+name+'" already exists').encode() in e.info['connection']:
@@ -373,29 +410,34 @@ class Connection:
 								time.sleep(1)
 							else: raise
 				else:
-					result = interface.executeOnce(raw,
-																				 stmt.encode('utf-8'),
-																				 len(args) if args else 0,
-																				 types,
-																				 values,
-																				 lengths,
-																				 fmt,
-																				 0);
+					checkOne(interface.send.noprep.query(
+						raw,
+						stmt.encode('utf-8'),
+						len(args) if args else 0,
+						types,
+						values,
+						lengths,
+						fmt,
+						0));
+
+					result = self.nextResult(raw)
+					
 					self.status = interface.resultStatus(result)
 					self.result = Result(self,raw,result,fullstmt,args)
 
 					if len(stmt) > 14: # don't bother preparing short statements ever
-						self.executedBefore.add(stmt)
+						self.executedBefore.add(hash(stmt))
 					return self.result
 			try:
-				result = interface.execute(raw,
+				checkOne(interface.send.query(
+					raw,
 					name.encode('utf-8'),
 					len(args),
 					values,
 					lengths,
 					fmt,
-					0)
-
+					0))
+				result = self.nextResult(self.raw)
 				self.status = interface.resultStatus(result)
 				self.result = Result(self,raw,result,fullstmt,args)
 			except SQLError as e:
@@ -410,14 +452,16 @@ class Connection:
 		raw = self.connect()
 		@self.reconnecting
 		def _():
-			result = interface.executeOnce(raw,
-					stmt.encode('utf-8'),
-					0,
-					None,
-					None,
-					None,
-					None,
-					0)
+			checkOne(interface.send.noprep.query(
+				raw,
+				stmt.encode('utf-8'),
+				0,
+				None,
+				None,
+				None,
+				None,
+				0))
+			result = self.nextResult(raw)
 			self.status = interface.resultStatus(result)
 		if 'TO' in stmt:
 			return self.copyIn(stmt,raw)
@@ -428,30 +472,50 @@ class Connection:
 				source = source.readinto
 			elif hasattr(source,'readinto'):
 				source = source.readinto
-			return self.copyOut(source,raw)
+			return self.copyOut(stmt,source,raw)
 	def copyIn(self,stmt,raw):
+		buf = ctypes.c_char_p(None)
 		while True:
-			buf = ctypes.c_char_p(None)
-			code = interface.getCopyData(raw,ctypes.byref(buf),0)
-			if code == -1:
+			code = interface.getCopyData(raw,ctypes.byref(buf),1)
+			if code == 0:
+				self.poll.poll()
+				consume(raw)
+				continue
+			elif code == -1:
 				return
 			elif code == -2:
-				message = self.decode(interface.connectionErrorMessage(raw))
-				if self.verbose:
-					out = self.out if self.out else sys.stdout
-					out.write(message+'\n')
-					out.flush()
-				raise SQLError(stmt,{'message': message})
+				raise SQLError(stmt,getError(raw))
 			else:
 				yield self.decode(ctypes.string_at(buf))
-	def copyOut(self,source,raw):
+	@pollout
+	def copyOut(self,stmt,source,raw):
 		buf = bytearray(0x1000)
+		thenRaise = None
 		while True:
 			try:
 				amt = source(buf)
 				if not amt: break
-				assert 1 == interface.putCopyData(raw,bytes(memoryview(buf)[:amt]),amt)
+				while True:
+					res = interface.putCopyData(raw,bytes(memoryview(buf)[:amt]),amt)
+					if res == 0:
+						self.poll.poll()
+					elif res == 1:
+						break
+					else:
+						raise SQLError(stmt,getError(raw))
 			except Exception as e:
-				assert 1 == interface.putCopyEnd(raw,str(e).encode('utf-8'))
-				raise
-		assert 1 == interface.putCopyEnd(raw,None)
+				thenRaise = e
+				break
+		while True:
+			res = interface.putCopyEnd(raw,None)
+			if res == 0:
+				self.poll.poll()
+			elif res == 1:
+				break
+			else:
+				error = SQLError(stmt,getError(raw))
+				if thenRaise:
+					raise error from thenRaise
+				raise error
+		if thenRaise is not None:
+			raise thenRaise
