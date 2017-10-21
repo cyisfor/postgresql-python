@@ -261,15 +261,17 @@ class Connection:
 	def results(self,raw,stmt,args=()):
 		consume(raw)
 		i=0
+		result = None
 		while True:
 			print("um",i)
 			i += 1
 			while interface.isBusy(raw):
 				self.poll.poll()
 				consume(raw)
-			result = interface.next(raw)
-			print("boink",result)
-			if not result: return
+			newresult = interface.next(raw)
+			if not newresult: return
+			if result == newresult: return
+			result = newresult
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
 			yield result
