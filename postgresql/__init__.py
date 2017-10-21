@@ -11,7 +11,7 @@ class stagetwo:
 		return init
 	def __getattr__(self,n):
 		#print("ey?",n)
-		if n == 'Connection':
+		if n in {'Connection','transaction','retransaction','saved','SQLError'}:
 			# triggered!
 			init = self()
 			return init.Connection
