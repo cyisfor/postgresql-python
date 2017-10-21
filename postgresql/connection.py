@@ -138,6 +138,8 @@ class Result(list):
 		resStatus = interface.resStatus(self.statusId)
 		if resStatus:
 			self.status = resStatus
+		print(self.status)
+
 		if self.statusId not in OKstatuses:
 			error = getError(raw)
 			interface.freeResult(raw)
@@ -183,7 +185,6 @@ class Result(list):
 					val = self.demogrify(rawval,self.types[c])
 				row.append(val)
 			self.append(row)
-		help(self)
 		interface.freeResult(raw)
 
 stmtcounter = count(0)
