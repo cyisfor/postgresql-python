@@ -9,7 +9,7 @@ result = c.execute("INSERT INTO derp (id,derp) VALUES ($1,$2) RETURNING derp",(4
 print("result:",result)
 
 from io import StringIO
-source = StringIO("23\t'fnord'\n7\t'lucky'\n13\t'unlucky'\n")
+source = StringIO("23\t'fnord'\n7\tlucky ducky\n13\t'unlucky'\n")
 result = tuple(c.copy("COPY derp (id,derp) FROM STDIN",source))
 print(result)
 
