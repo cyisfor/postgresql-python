@@ -502,6 +502,7 @@ class Connection:
 					source = source.readinto
 				yield from self.copyOut(stmt,source,raw)
 	def copyIn(self,stmt,raw):
+		print("boink")
 		buf = ctypes.c_char_p(None)
 		while True:
 			code = interface.getCopyData(raw,ctypes.byref(buf),1)
