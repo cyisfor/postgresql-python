@@ -491,6 +491,7 @@ class Connection:
 				0))
 			self.result = oneresult(self.results(raw,stmt))
 			yield self.result
+			print("boink",stmt)
 			if 'TO' in stmt:
 				yield from self.copyIn(stmt,raw)
 			else:
@@ -502,7 +503,6 @@ class Connection:
 					source = source.readinto
 				yield from self.copyOut(stmt,source,raw)
 	def copyIn(self,stmt,raw):
-		print("boink")
 		buf = ctypes.c_char_p(None)
 		while True:
 			code = interface.getCopyData(raw,ctypes.byref(buf),1)
