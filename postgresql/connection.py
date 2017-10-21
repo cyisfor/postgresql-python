@@ -520,7 +520,7 @@ class Connection:
 				else:
 					oldsource = source
 					def source(buf):
-						buf[:] = source.read(len(buf))
+						buf[:] = oldsource.read(len(buf))
 						return len(buf)
 				return self.copyFrom(raw,stmt,source)
 		return gen
