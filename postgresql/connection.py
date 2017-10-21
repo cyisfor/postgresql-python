@@ -323,7 +323,7 @@ class Connection:
 		self.reconnect()
 		if need_setup:
 			# but don't setup if we already did!
-			interface.setErrorVerbosity(self.safe.raw,interface.PGVerbosity.VERBOSE)
+			interface.setErrorVerbosity(self.safe.raw,interface.Verbosity.VERBOSE)
 			self.setup(self.safe.raw)
 		return self.safe.raw
 	def reconnect(self):
