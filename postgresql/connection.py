@@ -554,7 +554,7 @@ class Connection:
 				amt = source(buf)
 				if not amt: break
 				while True:
-					res = interface.putCopyData(raw,buf,amt)
+					res = interface.putCopyData(raw,bytes(buf),amt)
 					if res == 0:
 						self.poll.poll()
 					elif res == 1:
