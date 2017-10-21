@@ -520,7 +520,10 @@ class Connection:
 				else:
 					oldsource = source
 					def source(buf):
-						buf[:] = oldsource.read(len(buf))
+						s = oldsource.read(len(buf))
+						if hasattr(s,'encode'):
+							s = s.encode('utf-8')
+						buf[:] = s
 						return len(buf)
 				return self.copyFrom(raw,stmt,source)
 		return gen
