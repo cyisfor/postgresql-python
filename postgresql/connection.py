@@ -212,6 +212,11 @@ class Connection:
 	savePoint = None
 	verbose = False
 	out = None
+	def derp(self):
+		print("um",self._ctypessuck,self.params.value,
+					self.safe.raw)
+		print(interface.name(self.safe.raw),
+					interface.port(self.safe.raw))
 	def __init__(self,**params):
 		if 'params' in params:
 			params.update(params['params'])
@@ -295,8 +300,8 @@ class Connection:
 	def connect(self):
 		need_setup = False
 		if self.safe.raw is None:
-			self.safe.raw = interface.connect(self.params,1)
-			print("um",self._ctypessuck,self.params.value)
+			self.safe.raw = interface.connect(b"",1)
+			self.derp()
 			self.poll = select.poll()
 			sock = interface.socket(self.safe.raw)
 			self.poll.register(sock, select.POLLIN)
@@ -315,10 +320,7 @@ class Connection:
 			print("connection bad?",interface.status(self.safe.raw),getError(self.safe.raw))
 			import time
 			time.sleep(1)
-			print("um",self._ctypessuck,self.params.value,
-						self.safe.raw,
-						interface.db(self.safe.raw),
-						interface.port(self.safe.raw))
+			self.derp()
 			interface.reset(self.safe.raw)
 		if boop:
 			self.executedBefore = set()

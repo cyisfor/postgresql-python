@@ -124,5 +124,5 @@ putCopyData = MF(lib.PQputCopyData,c_int,
 								 
 putCopyEnd = lib.PQputCopyEnd
 
-port = MF(lib.PQport,connection,c_char_p)
-name = MF(lib.PQdb,connection,c_char_p)
+port = MF(lib.PQport,c_char_p,connection)
+name = MF(lib.PQdb,c_char_p,connection)
