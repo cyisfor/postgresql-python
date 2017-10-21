@@ -182,9 +182,7 @@ def cstrize(s):
 
 def makederp(typ,args):
 	if not args: return None
-	typ *= len(args)
-	val = typ(*args)
-	return val
+	return typ(args)
 
 class LocalConn(threading.local):
 	raw = None
@@ -213,6 +211,10 @@ class Connection:
 	savePoint = None
 	verbose = False
 	out = None
+	def checkOne(self,i):
+		if i != 1:
+			raise SQLError("derp",self.getError(self.safe.raw))
+			
 	def derp(self,i=0):
 		print("um",i,self._ctypessuck,self.params.value,
 					self.safe.raw)
@@ -387,14 +389,15 @@ class Connection:
 		def _():
 			name = self.prepareds.get(stmt)
 			if name is None:
-				types = makederp(ctypes.c_void_p,(None,)*len(args))
+				types = None
 				def reallyprepare(name):
 					name = anonstatement()
-					checkOne(interface.send.prepare(raw,
-																					name.encode('utf-8'),
-																					stmt.encode('utf-8'),
-																					len(args),
-																					types))
+					self.checkOne(interface.send.prepare(
+						raw,
+						name.encode('utf-8'),
+						stmt.encode('utf-8'),
+						len(args),
+						types))
 					self.nextResult(raw,stmt)
 					# this is only the result of PREPARATION not executing it
 					prep = Prepared(name)
@@ -412,7 +415,7 @@ class Connection:
 								time.sleep(1)
 							else: raise
 				else:
-					checkOne(interface.send.noprep.query(
+					self.checkOne(interface.send.noprep.query(
 						raw,
 						stmt.encode('utf-8'),
 						len(args) if args else 0,
@@ -428,7 +431,7 @@ class Connection:
 						self.executedBefore.add(hash(stmt))
 					return self.result
 			try:
-				checkOne(interface.send.query(
+				self.checkOne(interface.send.query(
 					raw,
 					name.encode('utf-8'),
 					len(args),
@@ -449,7 +452,7 @@ class Connection:
 		raw = self.connect()
 		@self.reconnecting
 		def _():
-			checkOne(interface.send.noprep.query(
+			self.checkOne(interface.send.noprep.query(
 				raw,
 				stmt.encode('utf-8'),
 				0,
