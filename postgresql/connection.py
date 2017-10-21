@@ -519,10 +519,9 @@ class Connection:
 					source = source.readinto
 				else:
 					oldsource = source
-					def wrapper(buf):
+					def source(buf):
 						buf[:] = source.read(len(buf))
 						return len(buf)
-					source = wrapper
 				return self.copyFrom(raw,stmt,source)
 		return gen
 	def copyTo(self,stmt,raw):
