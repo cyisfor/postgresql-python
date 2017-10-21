@@ -62,6 +62,8 @@ class send:
 #executeOnce = lib.PQexecParams
 #prepare = lib.PQprepare
 class result(c_void_p):
+	def __str__(self):
+		return super().__str__()
 	def __getattr__(self,n):
 		print("ummmm",n)
 		return super().__getattr__(n)
