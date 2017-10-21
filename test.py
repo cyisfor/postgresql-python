@@ -27,4 +27,3 @@ for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
     print(repr(buf))
 print("Also returns tuples updated in the final result:")
 print(c.result.tuplesUpdated)
-
