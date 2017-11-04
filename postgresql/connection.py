@@ -100,6 +100,7 @@ def notReentrant(f):
 		self.busyb = (f,a,kw)
 		try:
 			g = f(self,*a,**kw)
+			print(a)
 			print("ret",g)
 			if(hasattr(g,'__next__')):
 				return tuple(g)
