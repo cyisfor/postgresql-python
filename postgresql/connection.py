@@ -309,7 +309,7 @@ class Connection:
 		except SQLError:
 			raise
 		except:
-			self.canceller.cancel()
+			self.safe.canceller.cancel()
 			print("Requested cancel...")
 			self.poll.poll(1000) # wait a bit to give it a chance?
 			raise
@@ -402,7 +402,7 @@ class Connection:
 		if need_setup:
 			# but don't setup if we already did!
 			interface.setErrorVerbosity(self.safe.raw,interface.Verbosity.VERBOSE)
-			self.canceller = Canceller(self)
+			self.safe.canceller = Canceller(self)
 			self.setup(self.safe.raw)
 		return self.safe.raw
 	def reconnect(self):
@@ -424,7 +424,6 @@ class Connection:
 		if boop:
 			self.executedBefore = set()
 			self.prepareds = dict()
-	canceller = None
 	def mogrify(self,i):
 		if i is None:
 			return 'NULL'
