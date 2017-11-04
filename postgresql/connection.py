@@ -114,7 +114,6 @@ def parseNumber(result):
 def getError(raw):
 	error = {}
 	derp = interface.connectionErrorMessage(raw)
-	print("aftea",derp)
 
 	for k,v in (('message',interface.errorMessage(raw)),
 							('connection',derp),
@@ -265,12 +264,6 @@ class Connection:
 	def checkOne(self,i):
 		if i != 1:
 			raise SQLError("derp",getError(self.safe.raw))
-			
-	def derp(self,i=0):
-		print("um",i,self._ctypessuck,self.params.value,
-					self.safe.raw)
-		print(interface.name(self.safe.raw),
-					interface.port(self.safe.raw))
 	def __init__(self,**params):
 		if 'params' in params:
 			params.update(params['params'])
@@ -315,6 +308,7 @@ class Connection:
 			raise
 		finally:
 			print("end results",stmt)
+			interface.next(raw) # why an extra one?
 	def derp_cancellable_results(self,raw,stmt,args=()):
 		consume(raw)
 		i=0
@@ -322,13 +316,9 @@ class Connection:
 		while True:
 			i += 1
 			while interface.isBusy(raw):
-				print("polling")
 				self.poll.poll()
-				print("b4",raw)
 				consume(raw)
 			result = interface.next(raw)
-			print("result",result)
-			time.sleep(0.2);
 			if not result: return
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
@@ -504,6 +494,7 @@ class Connection:
 							result = oneresult(results)
 						if not result: break
 						print(result)
+					print("Prepare done",stmt)
 					# this is only the result of PREPARATION not executing it
 					prep = Prepared(name)
 					self.prepareds[stmt] = prep
@@ -520,7 +511,7 @@ class Connection:
 								time.sleep(1)
 							else: raise
 				else:
-					print("Noprep",stmt)
+					print("Noprep1",stmt)
 					self.checkOne(interface.send.noprep.query(
 						raw,
 						stmt.encode('utf-8'),
@@ -532,6 +523,7 @@ class Connection:
 						0))
 					with self.results(raw,stmt,args) as results:
 						self.result = oneresult(results)
+					print("Noprep1 done",stmt)
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
 					return self.result
@@ -547,6 +539,7 @@ class Connection:
 					0))
 				with self.results(raw,stmt,args) as results:
 					self.result = oneresult(results)
+				print("Query done",stmt)
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
@@ -578,6 +571,7 @@ class Connection:
 				else:
 					print("um... no copy?")
 					return
+			print("Noprep done",stmt)
 			if result.statusId == E.COPY_OUT:
 				yield from self.copyTo(stmt,raw)
 			else:
