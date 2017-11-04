@@ -107,7 +107,7 @@ def notReentrant(f):
 			return g
 		finally:
 			self.safe.busy = False
-			del self.busyb
+			self.busyb = None
 			print("nabusy",id(self),a)
 	return wrapper
 
