@@ -225,6 +225,8 @@ def makederp(typ,args):
 
 class LocalConn(threading.local):
 	raw = None
+	canceller = None
+	busy = False
 
 def pollout(f):
 	def wrapper(self,raw,*a,**kw):
@@ -278,8 +280,6 @@ class Connection:
 		self._ctypessuck = (" ".join(n+"="+repr(v) for n,v in params.items())).encode("utf-8")
 		self.params = ctypes.create_string_buffer(self._ctypessuck)
 		self.safe = LocalConn()
-		self.safe.busy = False
-		self.safe.canceller = None
 		self.executedBefore = set()
 		self.prepareds = dict()
 	specialDecoders = None
