@@ -287,11 +287,7 @@ class Connection:
 					self.reconnect()
 				else: raise
 	def results(self,raw,stmt,args=()):
-		try:
-			val = self.derp_results(raw,stmt,args)
-		except:
-			self.canceller.cancel()
-			raise
+		val = self.derp_results(raw,stmt,args)
 		class results:
 			def __enter__(self):
 				return val
@@ -301,7 +297,16 @@ class Connection:
 					n += 1
 				print("cleanup results",n)
 		return results()
-	def derp_results(self,raw,stmt,args=()):
+	def derp_results(self, raw, stmt, args):
+		try:
+			yield from self.derp_cancellable_results(raw, stmt, args)
+		except KeyboardInterrupt:
+			print("Requested cancel...")
+			self.canceller.cancel()
+			print("Requested cancel...")
+			self.poll.poll(1000) # wait a bit to give it a chance?
+			raise
+	def derp_cancellable_results(self,raw,stmt,args=()):
 		consume(raw)
 		i=0
 		oldresult = None
@@ -409,10 +414,10 @@ class Connection:
 				self.poll.poll(1000)
 				consume(raw)
 				interface.connectPoll(raw)
+			self.canceller = Canceller(self)
 		if boop:
 			self.executedBefore = set()
 			self.prepareds = dict()
-			self.canceller = Canceller(self)
 	canceller = None
 	def mogrify(self,i):
 		if i is None:
