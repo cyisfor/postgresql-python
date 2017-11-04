@@ -445,7 +445,10 @@ class Connection:
 	def encode(self,i):
 		return self.mogrify(i).encode('utf-8')
 	def execute(self,stmt,args=()):
-		return self.executeRaw(self.connect(),stmt,args)
+		try:
+			return self.executeRaw(self.connect(),stmt,args)
+		finally:
+			print("Execute done",stmt)
 	busy = False
 	busyB = None
 	@notReentrant
