@@ -232,11 +232,11 @@ def pollout(f):
 	def wrapper(self,raw,*a,**kw):
 		sock = interface.socket(raw)
 #		print(sock,raw)
-		self.poll.modify(sock,select.POLLOUT)
+		self.safe.poll.modify(sock,select.POLLOUT)
 		try:
 			return f(self,raw,*a,**kw)
 		finally:
-			self.poll.modify(sock,select.POLLIN)
+			self.safe.poll.modify(sock,select.POLLIN)
 	return wrapper
 
 
@@ -313,7 +313,7 @@ class Connection:
 		except:
 			self.safe.canceller.cancel()
 			print("Requested cancel...")
-			self.poll.poll(1000) # wait a bit to give it a chance?
+			self.poll(1000) # wait a bit to give it a chance?
 			raise
 		finally:
 #			print("end results",stmt)
@@ -325,7 +325,7 @@ class Connection:
 		while True:
 			i += 1
 			while interface.isBusy(raw):
-				self.poll.poll()
+				self.poll()
 				consume(raw)
 			result = interface.next(raw)
 			if not result: return
@@ -385,19 +385,21 @@ class Connection:
 		if decoder:
 			return decoder(result)
 		return result
+	def poll(t=None):
+		return self.safe.poll.poll(t)
 	def connect(self):
 		P = interface.PollingStatus
 		need_setup = False
 		if self.safe.raw is None:
 			raw = self.safe.raw = interface.connect(self.params,1)
-			self.poll = select.poll()
+			self.safe.poll = select.poll()
 			sock = interface.socket(raw)
-			self.poll.register(sock, select.POLLIN)
+			self.safe.poll.register(sock, select.POLLIN)
 			while True:
 				res = interface.connectPoll(raw)
 				print("connecting...",res,P.OK,res == P.OK)
 				if res == P.OK: break
-				self.poll.poll(1000)				
+				self.poll(1000)				
 			# can't setup until we have a good connection...
 			need_setup = True
 		self.reconnect()
@@ -420,7 +422,7 @@ class Connection:
 				time.sleep(1)
 				interface.reset(raw)
 			while not interface.status(raw) not in {C.OK,C.MADE}:
-				self.poll.poll(1000)
+				self.poll(1000)
 				consume(raw)
 				interface.connectPoll(raw)
 		if boop:
@@ -607,7 +609,7 @@ class Connection:
 		while True:
 			code = interface.getCopyData(raw,ctypes.byref(buf),1)
 			if code == 0:
-				self.poll.poll()
+				self.poll()
 				consume(raw)
 				continue
 			elif code == -1:
@@ -632,7 +634,7 @@ class Connection:
 					arr = ctypes.c_char * amt
 					res = interface.putCopyData(raw,arr.from_buffer(buf),amt)
 					if res == 0:
-						self.poll.poll()
+						self.poll()
 					elif res == 1:
 						break
 					else:
@@ -643,7 +645,7 @@ class Connection:
 		while True:
 			res = interface.putCopyEnd(raw,None)
 			if res == 0:
-				self.poll.poll()
+				self.poll()
 			elif res == 1:
 				break
 			else:
