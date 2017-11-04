@@ -158,7 +158,6 @@ class Result(list):
 			self.status = resStatus
 		if self.statusId not in OKstatuses:
 			error = getError(rawconn)
-
 			interface.freeResult(raw)
 			if self.statusId != E.NONFATAL_ERROR:
 				if self.verbose:
@@ -304,14 +303,18 @@ class Connection:
 				print("cleanup results",n)
 		return results()
 	def derp_results(self, raw, stmt, args):
+		print("start results",stmt)
 		try:
-			yield from self.derp_cancellable_results(raw, stmt, args)
-		except KeyboardInterrupt:
+			return iter(tuple(self.derp_cancellable_results(raw, stmt, args)))
+		except SQLError:
+			raise
+		except:
 			self.canceller.cancel()
 			print("Requested cancel...")
 			self.poll.poll(1000) # wait a bit to give it a chance?
-			input()
 			raise
+		finally:
+			print("end results",stmt)
 	def derp_cancellable_results(self,raw,stmt,args=()):
 		consume(raw)
 		i=0
@@ -489,6 +492,7 @@ class Connection:
 				types = None
 				name = anonstatement()
 				def reallyprepare():
+					print("Prepare",stmt)
 					self.checkOne(interface.send.prepare(
 						raw,
 						name.encode('utf-8'),
@@ -516,6 +520,7 @@ class Connection:
 								time.sleep(1)
 							else: raise
 				else:
+					print("Noprep",stmt)
 					self.checkOne(interface.send.noprep.query(
 						raw,
 						stmt.encode('utf-8'),
@@ -526,13 +531,12 @@ class Connection:
 						fmt,
 						0))
 					with self.results(raw,stmt,args) as results:
-						print("b4")
 						self.result = oneresult(results)
-						print("after")
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
 					return self.result
 			try:
+				print("Query",stmt)
 				self.checkOne(interface.send.query(
 					raw,
 					name.encode('utf-8'),
@@ -557,6 +561,7 @@ class Connection:
 		def gen():
 			nonlocal source
 			raw = self.connect()
+			print("Noprep",stmt)
 			self.checkOne(interface.send.noprep.query(
 				raw,
 				stmt.encode('utf-8'),
