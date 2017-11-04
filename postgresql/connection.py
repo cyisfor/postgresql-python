@@ -95,12 +95,12 @@ def oneresult(results):
 def notReentrant(f):
 	def wrapper(self,*a,**kw):
 		assert not self.busy, (f,a,kw)
-		print("busy",f)
+#		print("busy",f)
 		self.busy = True
 		try:
 			return f(self,*a,**kw)
 		finally:
-			print("nabusy",f)
+#			print("nabusy",f)
 			self.busy = False
 	return wrapper
 
@@ -222,7 +222,7 @@ class LocalConn(threading.local):
 def pollout(f):
 	def wrapper(self,raw,*a,**kw):
 		sock = interface.socket(raw)
-		print(sock,raw)
+#		print(sock,raw)
 		self.poll.modify(sock,select.POLLOUT)
 		try:
 			return f(self,raw,*a,**kw)
@@ -293,10 +293,10 @@ class Connection:
 				n = 0
 				for result in val:
 					n += 1
-				print("cleanup results",n)
+#				print("cleanup results",n)
 		return results()
 	def derp_results(self, raw, stmt, args):
-		print("start results",stmt)
+#		print("start results",stmt)
 		try:
 			return iter(tuple(self.derp_cancellable_results(raw, stmt, args)))
 		except SQLError:
@@ -307,7 +307,7 @@ class Connection:
 			self.poll.poll(1000) # wait a bit to give it a chance?
 			raise
 		finally:
-			print("end results",stmt)
+#			print("end results",stmt)
 			interface.next(raw) # why an extra one?
 	def derp_cancellable_results(self,raw,stmt,args=()):
 		consume(raw)
@@ -461,7 +461,7 @@ class Connection:
 					else:
 						return "'"+str(s)+"'"
 				derpsubs = dict((key,derpify(args[key])) for key in keys)
-				print(stmt % derpsubs)
+#				print(stmt % derpsubs)
 			stmt = stmt % subs
 			args = [args[key] for key in keys]
 			# badda boom
@@ -482,7 +482,7 @@ class Connection:
 				types = None
 				name = anonstatement()
 				def reallyprepare():
-					print("Prepare",stmt)
+#					print("Prepare",stmt)
 					self.checkOne(interface.send.prepare(
 						raw,
 						name.encode('utf-8'),
@@ -493,8 +493,8 @@ class Connection:
 						with self.results(raw,stmt,args) as results:
 							result = oneresult(results)
 						if not result: break
-						print(result)
-					print("Prepare done",stmt)
+#						print(result)
+#					print("Prepare done",stmt)
 					# this is only the result of PREPARATION not executing it
 					prep = Prepared(name)
 					self.prepareds[stmt] = prep
@@ -511,7 +511,7 @@ class Connection:
 								time.sleep(1)
 							else: raise
 				else:
-					print("Noprep1",stmt)
+#					print("Noprep1",stmt)
 					self.checkOne(interface.send.noprep.query(
 						raw,
 						stmt.encode('utf-8'),
@@ -523,12 +523,12 @@ class Connection:
 						0))
 					with self.results(raw,stmt,args) as results:
 						self.result = oneresult(results)
-					print("Noprep1 done",stmt)
+#					print("Noprep1 done",stmt)
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
 					return self.result
 			try:
-				print("Query",stmt)
+#				print("Query",stmt)
 				self.checkOne(interface.send.query(
 					raw,
 					name.encode('utf-8'),
@@ -539,7 +539,7 @@ class Connection:
 					0))
 				with self.results(raw,stmt,args) as results:
 					self.result = oneresult(results)
-				print("Query done",stmt)
+#				print("Query done",stmt)
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
@@ -554,7 +554,7 @@ class Connection:
 		def gen():
 			nonlocal source
 			raw = self.connect()
-			print("Noprep",stmt)
+#			print("Noprep",stmt)
 			self.checkOne(interface.send.noprep.query(
 				raw,
 				stmt.encode('utf-8'),
@@ -571,7 +571,7 @@ class Connection:
 				else:
 					print("um... no copy?")
 					return
-			print("Noprep done",stmt)
+#			print("Noprep done",stmt)
 			if result.statusId == E.COPY_OUT:
 				yield from self.copyTo(stmt,raw)
 			else:
