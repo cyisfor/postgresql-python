@@ -94,8 +94,8 @@ def oneresult(results):
 
 def notReentrant(f):
 	def wrapper(self,*a,**kw):
-		assert not self.busy, (self.busyb, (f,a,kw))
 		print("busy",id(self),a)
+		assert not self.busy, (self.busyb, (f,a,kw))
 		self.busy = True
 		self.busyb = (f,a,kw)
 		try:
