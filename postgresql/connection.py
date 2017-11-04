@@ -94,13 +94,15 @@ def oneresult(results):
 
 def notReentrant(f):
 	def wrapper(self,*a,**kw):
-		assert not self.busy, (f,a,kw)
+		assert not self.busy, (self.busyb, (f,a,kw))
 		print("busy",f)
 		self.busy = True
+		self.busyb = f
 		try:
 			return f(self,*a,**kw)
 		finally:
 			print("nabusy",f)
+			del self.busyb
 			self.busy = False
 	return wrapper
 
@@ -445,6 +447,7 @@ class Connection:
 	def execute(self,stmt,args=()):
 		return self.executeRaw(self.connect(),stmt,args)
 	busy = False
+	busyB = None
 	@notReentrant
 	def executeRaw(self,raw,stmt,args=()):
 		if isinstance(args,dict):
