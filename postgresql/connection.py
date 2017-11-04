@@ -95,8 +95,8 @@ def oneresult(results):
 def notReentrant(f):
 	def wrapper(self,*a,**kw):
 		print("busy",id(self),a)
-		assert not self.busy, (self.busyb, (f,a,kw))
-		self.busy = True
+		assert not self.safe.busy, (self.busyb, (f,a,kw))
+		self.safe.busy = True
 		self.busyb = (f,a,kw)
 		try:
 			g = f(self,*a,**kw)
@@ -106,7 +106,7 @@ def notReentrant(f):
 				return tuple(g)
 			return g
 		finally:
-			self.busy = False
+			self.safe.busy = False
 			del self.busyb
 			print("nabusy",id(self),a)
 	return wrapper
@@ -278,6 +278,8 @@ class Connection:
 		self._ctypessuck = (" ".join(n+"="+repr(v) for n,v in params.items())).encode("utf-8")
 		self.params = ctypes.create_string_buffer(self._ctypessuck)
 		self.safe = LocalConn()
+		self.safe.busy = False
+		self.safe.canceller = None
 		self.executedBefore = set()
 		self.prepareds = dict()
 	specialDecoders = None
