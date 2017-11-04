@@ -99,7 +99,10 @@ def notReentrant(f):
 		self.busy = True
 		self.busyb = (f,a,kw)
 		try:
-			return f(self,*a,**kw)
+			g = f(self,*a,**kw)
+			if(hasattr(g,'__next__')):
+				yield from g
+			return g
 		finally:
 			self.busy = False
 			del self.busyb
