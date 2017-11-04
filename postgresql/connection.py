@@ -95,9 +95,9 @@ def oneresult(results):
 def notReentrant(f):
 	def wrapper(self,*a,**kw):
 		print("busy",id(self),a)
-		assert not self.safe.busy, (self.busyb, (f,a,kw))
+		assert not self.safe.busy, (self.safe.busyb, (f,a,kw))
 		self.safe.busy = True
-		self.busyb = (f,a,kw)
+		self.safe.busyb = (f,a,kw)
 		try:
 			g = f(self,*a,**kw)
 			print(a)
@@ -107,7 +107,7 @@ def notReentrant(f):
 			return g
 		finally:
 			self.safe.busy = False
-			self.busyb = None
+			self.safe.busyb = None
 			print("nabusy",id(self),a)
 	return wrapper
 
@@ -228,6 +228,7 @@ class LocalConn(threading.local):
 	canceller = None
 	busy = False
 	poll = None
+	busyb = None
 
 def pollout(f):
 	def wrapper(self,raw,*a,**kw):
@@ -459,7 +460,6 @@ class Connection:
 		finally:
 			print("Execute done",stmt)
 	busy = False
-	busyB = None
 	@notReentrant
 	def executeRaw(self,raw,stmt,args=()):
 		if isinstance(args,dict):
