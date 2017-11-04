@@ -386,7 +386,7 @@ class Connection:
 		if decoder:
 			return decoder(result)
 		return result
-	def poll(t=None):
+	def poll(self, t=None):
 		return self.safe.poll.poll(t)
 	def connect(self):
 		P = interface.PollingStatus
