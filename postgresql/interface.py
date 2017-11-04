@@ -131,3 +131,13 @@ putCopyEnd = lib.PQputCopyEnd
 
 port = MF(lib.PQport,c_char_p,connection)
 name = MF(lib.PQdb,c_char_p,connection)
+
+class _canceller(c_void_p): pass
+
+canceller = MF(lib.PQgetCancel,
+							 _canceller,
+							 connection)
+
+cancel = MF(lib.PQCancel,
+						c_int,
+						_canceller, c_char_p, c_int)

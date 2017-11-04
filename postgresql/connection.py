@@ -243,6 +243,15 @@ def consume(raw):
 
 quotes = set((b"'"[0],b'"'[0]))
 
+class Canceller:
+	def __init__(self,conn):
+		self.raw = interface.canceller(conn.raw)
+	def cancel(self):
+		s = ctypes.create_string_buffer(0x1000)
+		ret = interface.cancel(self.raw, s, 0x1000)
+		if ret == 0:
+			raise SQLError("Could not cancel: "+s)
+
 class Connection:
 	inTransaction = False
 	savePoint = None
@@ -278,7 +287,11 @@ class Connection:
 					self.reconnect()
 				else: raise
 	def results(self,raw,stmt,args=()):
-		val = self.derp_results(raw,stmt,args)
+		try:
+			val = self.derp_results(raw,stmt,args)
+		except:
+			self.canceller.cancel()
+			raise
 		class results:
 			def __enter__(self):
 				return val
@@ -300,8 +313,9 @@ class Connection:
 				print("b4",raw)
 				consume(raw)
 			result = interface.next(raw)
-			if not result: return
 			print("result",result)
+			time.sleep(0.2);
+			if not result: return
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
 			yield result
@@ -398,6 +412,8 @@ class Connection:
 		if boop:
 			self.executedBefore = set()
 			self.prepareds = dict()
+			self.canceller = Canceller(self)
+	canceller = None
 	def mogrify(self,i):
 		if i is None:
 			return 'NULL'
