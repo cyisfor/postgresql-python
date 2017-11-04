@@ -95,13 +95,13 @@ def oneresult(results):
 def notReentrant(f):
 	def wrapper(self,*a,**kw):
 		assert not self.busy, (self.busyb, (f,a,kw))
-		print("busy",f)
+		print("busy",a)
 		self.busy = True
 		self.busyb = (f,a,kw)
 		try:
 			return f(self,*a,**kw)
 		finally:
-			print("nabusy",f)
+			print("nabusy",a)
 			del self.busyb
 			self.busy = False
 	return wrapper
