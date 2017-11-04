@@ -244,8 +244,14 @@ def consume(raw):
 quotes = set((b"'"[0],b'"'[0]))
 
 class Canceller:
+	raw = None
+	def __del__(self):
+		raw = self.raw
+		self.raw = None
+		if raw is not None:
+			interface.freeCancel(raw)
 	def __init__(self,conn):
-		self.raw = interface.canceller(conn.raw)
+		self.raw = interface.canceller(conn.safe.raw)
 	def cancel(self):
 		s = ctypes.create_string_buffer(0x1000)
 		ret = interface.cancel(self.raw, s, 0x1000)
@@ -301,10 +307,10 @@ class Connection:
 		try:
 			yield from self.derp_cancellable_results(raw, stmt, args)
 		except KeyboardInterrupt:
-			print("Requested cancel...")
 			self.canceller.cancel()
 			print("Requested cancel...")
 			self.poll.poll(1000) # wait a bit to give it a chance?
+			input()
 			raise
 	def derp_cancellable_results(self,raw,stmt,args=()):
 		consume(raw)
@@ -396,6 +402,7 @@ class Connection:
 		if need_setup:
 			# but don't setup if we already did!
 			interface.setErrorVerbosity(self.safe.raw,interface.Verbosity.VERBOSE)
+			self.canceller = Canceller(self)
 			self.setup(self.safe.raw)
 		return self.safe.raw
 	def reconnect(self):
@@ -414,7 +421,6 @@ class Connection:
 				self.poll.poll(1000)
 				consume(raw)
 				interface.connectPoll(raw)
-			self.canceller = Canceller(self)
 		if boop:
 			self.executedBefore = set()
 			self.prepareds = dict()

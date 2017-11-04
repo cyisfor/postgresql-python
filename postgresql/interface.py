@@ -138,6 +138,10 @@ canceller = MF(lib.PQgetCancel,
 							 _canceller,
 							 connection)
 
+freeCancel = MF(lib.PQfreeCancel,
+								None,
+								_canceller);
+
 cancel = MF(lib.PQcancel,
 						c_int,
 						_canceller, c_char_p, c_int)
