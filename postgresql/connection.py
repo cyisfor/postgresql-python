@@ -227,6 +227,7 @@ class LocalConn(threading.local):
 	raw = None
 	canceller = None
 	busy = False
+	poll = None
 
 def pollout(f):
 	def wrapper(self,raw,*a,**kw):
