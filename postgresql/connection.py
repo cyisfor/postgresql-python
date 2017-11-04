@@ -295,11 +295,13 @@ class Connection:
 		while True:
 			i += 1
 			while interface.isBusy(raw):
+				print("polling")
 				self.poll.poll()
 				print("b4",raw)
 				consume(raw)
 			result = interface.next(raw)
 			if not result: return
+			print("result",result)
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
 			yield result
