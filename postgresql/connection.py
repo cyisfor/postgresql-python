@@ -101,7 +101,7 @@ def notReentrant(f):
 		try:
 			g = f(self,*a,**kw)
 			if(hasattr(g,'__next__')):
-				yield from g
+				return tuple(g)
 			return g
 		finally:
 			self.busy = False
