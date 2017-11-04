@@ -97,7 +97,7 @@ def notReentrant(f):
 		assert not self.busy, (self.busyb, (f,a,kw))
 		print("busy",f)
 		self.busy = True
-		self.busyb = f
+		self.busyb = (f,a,kw)
 		try:
 			return f(self,*a,**kw)
 		finally:
