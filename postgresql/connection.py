@@ -95,15 +95,15 @@ def oneresult(results):
 def notReentrant(f):
 	def wrapper(self,*a,**kw):
 		assert not self.busy, (self.busyb, (f,a,kw))
-		print("busy",a)
+		print("busy",id(self),a)
 		self.busy = True
 		self.busyb = (f,a,kw)
 		try:
 			return f(self,*a,**kw)
 		finally:
-			print("nabusy",a)
-			del self.busyb
 			self.busy = False
+			del self.busyb
+			print("nabusy",id(self),a)
 	return wrapper
 
 def parseNumber(result):
