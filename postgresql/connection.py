@@ -327,7 +327,11 @@ class Connection:
 		while True:
 			i += 1
 			while interface.isBusy(raw):
-				self.poll()
+				while True:
+					res = self.poll(1000)
+					if len(res) > 0: break
+					assert len(res) == 0
+					print("Waiting on",stmt,res)
 				consume(raw)
 			result = interface.next(raw)
 			if not result: return

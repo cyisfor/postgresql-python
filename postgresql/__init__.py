@@ -122,7 +122,7 @@ class Cursor:
 		if self.closed: return
 #		print("CLOSE",self.name,self.connection.raw)
 		self.connection.execute("CLOSE "+self.name)
-		self.connection.safe.cursors.remove(self)
+		self.connection.safe.cursors.discard(self)
 		self.closed = True
 		if not self.connection.safe.cursors:
 			# you can't write to the database with cursors outstanding
