@@ -394,19 +394,9 @@ class Connection:
 	def poll(self, t=None):
 		return self.safe.poll.poll(t)
 	def connect(self):
-		P = interface.PollingStatus
 		need_setup = False
 		if self.safe.raw is None:
-			raw = self.safe.raw = interface.connect(self.params,1)
-			self.safe.poll = select.poll()
-			sock = interface.socket(raw)
-			self.safe.poll.register(sock, select.POLLIN)
-			while True:
-				res = interface.connectPoll(raw)
-				print("connecting...",res,P.OK,res == P.OK)
-				if res == P.OK: break
-				self.poll(1000)				
-			# can't setup until we have a good connection...
+			self.establish_connection()
 			need_setup = True
 		self.reconnect()
 		if need_setup:
@@ -415,6 +405,45 @@ class Connection:
 			self.safe.canceller = Canceller(self)
 			self.setup(self.safe.raw)
 		return self.safe.raw
+	def establish_connection(self):
+		P = interface.PollingStatus
+		delay = 0.1
+		while True:
+			raw = interface.connect(self.params,1)
+			status = interface.status(raw)
+			if status = interface.ConnStatus.BAD:
+				print("bad connection...")
+				sleep(delay)
+				delay *= 1.5
+				continue
+			self.safe.poll = select.poll()
+			sock = interface.socket(raw)
+			self.safe.poll.register(sock, select.POLLIN)
+			delay = 0.1
+			while True:
+				res = interface.connectPoll(raw)
+				print("connecting...",res,interface.status(raw))
+				if res == P.OK:
+					self.safe.raw = raw
+					return
+				elif res == P.READING:
+					self.safe.poll.modify(sock,select.POLLIN)
+				elif res == P.WRITING:
+					self.safe.poll.modify(sock,select.POLLOUT)
+				else:
+					print("Polling status failed!")
+					sleep(1)
+					break
+				delay = 1
+				while True:
+					# SIGH
+					events = self.poll(1000 * delay)
+					if events:
+						break
+					print("poll timeout on connecting...",res,delay)
+					delay *= 1.5
+					
+
 	def reconnect(self):
 		boop = False
 		raw = self.safe.raw
