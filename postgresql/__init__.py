@@ -121,7 +121,13 @@ class Cursor:
 	def close(self):
 		if self.closed: return
 #		print("CLOSE",self.name,self.connection.raw)
-		self.connection.execute("CLOSE "+self.name)
+		try:
+			self.connection.execute("CLOSE "+self.name)
+		except SQLError as e:
+			if b'does not exist' in e['connection']:
+				pass
+			else:
+				raise
 		self.connection.safe.cursors.discard(self)
 		self.closed = True
 		if not self.connection.safe.cursors:
@@ -135,7 +141,7 @@ class Cursor:
 	def __exit__(self,type,value,traceback):
 		self.close()
 	def __del__(self):
-		print("del",self.name)
+		#print("del",self.name)
 		try: self.close()
 		except Exception as e:
 			import traceback
