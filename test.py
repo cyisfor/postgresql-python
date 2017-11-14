@@ -18,7 +18,7 @@ for row in result:
 print('COPY FROM')
 from io import StringIO
 source = StringIO("""23	'fnord'
-7	'lucky ducky'
+7	lucky ducky
 13	'unlucky'
 """)
 result = tuple(c.copy("COPY derp (id,derp) FROM STDIN",source))
@@ -30,6 +30,6 @@ print('COPY TO')
 print("to a file, tuples updated:")
 print(c.execute("COPY derp (id,derp) TO '/tmp/derpderp'").tuplesUpdated)
 for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
-    print(repr(buf))
+    print("copy to result:",repr(buf))
 print("Also returns tuples updated in the final result:")
 print(c.result.tuplesUpdated)
