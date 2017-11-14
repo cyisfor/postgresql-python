@@ -154,6 +154,20 @@ class Result(list):
 		self.decode = conn.decode
 		self.demogrify = conn.demogrify
 		self.statusId = interface.resultStatus(raw)
+		self.fields = []
+		self.types = []
+		for c in range(interface.nfields(raw)):
+			fname = interface.fname(raw,c)
+			if fname is None:
+				self.fields.append(None)
+			else:
+				self.fields.append(self.decode(ctypes.string_at(fname)))
+			ftype = interface.ftype(raw,c)
+			if ftype is None:
+				self.types.append(None)
+			else:
+				self.types.append(int(ftype))
+		print("boop",self.types)
 		if self.statusId in {E.COPY_OUT,E.COPY_IN}:
 			interface.freeResult(raw)
 			return
@@ -179,19 +193,6 @@ class Result(list):
 		if self.tuplesUpdated:
 			self.tuplesUpdated = int(self.tuplesUpdated)
 
-		self.fields = []
-		self.types = []
-		for c in range(interface.nfields(raw)):
-			fname = interface.fname(raw,c)
-			if fname is None:
-				self.fields.append(None)
-			else:
-				self.fields.append(self.decode(ctypes.string_at(fname)))
-			ftype = interface.ftype(raw,c)
-			if ftype is None:
-				self.types.append(None)
-			else:
-				self.types.append(int(ftype))
 		for r in range(interface.ntuples(raw)):
 			row = list()
 			for c in range(interface.nfields(raw)):
@@ -607,7 +608,7 @@ class Connection:
 					return
 #			print("Noprep done",stmt)
 			if result.statusId == E.COPY_OUT:
-				yield from self.copyTo(raw,stmt,args)
+				yield from self.copyTo(raw,stmt,args,result)
 			else:
 				oldsource = None
 				oldoff = 0
@@ -639,7 +640,7 @@ class Connection:
 							return len(buf)
 				return self.copyFrom(raw,stmt,args,source)
 		return gen
-	def copyTo(self,raw,stmt,args):
+	def copyTo(self,raw,stmt,args,result):
 		buf = ctypes.c_char_p(None)
 		while True:
 			code = interface.getCopyData(raw,ctypes.byref(buf),1)
@@ -657,7 +658,7 @@ class Connection:
 					# if text mode...
 					row = row.split(b'\t')
 					for i,val in enumerate(row):
-						yield self.demogrify(val,stmt.types[i])
+						yield self.demogrify(val,result.types[i])
 				yield tuple(row())
 		# copy TO returns 1 result before (endlessly) and 1 result after (w/ NULL)
 		self.result = oneresult(self.results(raw,stmt,args))
