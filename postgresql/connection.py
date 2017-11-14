@@ -682,14 +682,25 @@ class Connection:
 			if res == 0:
 				self.poll()
 			elif res == 1:
-				break
+				res = self.flush()
+				if res == -1:
+					error = SQLError(stmt,getError(raw))
+					if thenRaise:
+						raise error from thenRaise
+					raise error
+				if res == 1:
+					break
+				# if res == 0: continue since putCopyEnd overflowed and was dropped
 			else:
 				error = SQLError(stmt,getError(raw))
 				if thenRaise:
 					raise error from thenRaise
 				raise error
-			with self.results(raw,stmt) as results:
-				self.result = oneresult(results)
+		with self.results(raw,stmt) as results:
+			self.result = oneresult(results)
 		if thenRaise is not None:
 			raise thenRaise
 		return self.result
+	def flush(self,raw):
+		self.poll()
+		return interface.flush(raw)
