@@ -660,46 +660,43 @@ class Connection:
 	@pollout
 	def copyFrom(self,raw,stmt,source):
 		buf = bytearray(0x1000)
-		thenRaise = None
-		while True:
-			try:
+		def putAll():
+			while True:
 				amt = source(buf)
 				if not amt: break
+				print(amt)
 				while True:
 					arr = ctypes.c_char * amt
 					res = interface.putCopyData(raw,arr.from_buffer(buf),amt)
 					if res == 0:
+						print("putwait")
 						self.poll()
 					elif res == 1:
-						break
+						return
 					else:
 						raise SQLError(stmt,getError(raw))
-			except Exception as e:
-				thenRaise = e
-				break
-		while True:
-			res = interface.putCopyEnd(raw,None)
-			if res == 0:
-				self.poll()
-			elif res == 1:
-				res = self.flush()
-				if res == -1:
-					error = SQLError(stmt,getError(raw))
-					if thenRaise:
-						raise error from thenRaise
-					raise error
-				if res == 1:
-					break
-				# if res == 0: continue since putCopyEnd overflowed and was dropped
-			else:
-				error = SQLError(stmt,getError(raw))
-				if thenRaise:
-					raise error from thenRaise
-				raise error
-		with self.results(raw,stmt) as results:
-			self.result = oneresult(results)
-		if thenRaise is not None:
-			raise thenRaise
+		def putEnd():
+			while True:
+				res = interface.putCopyEnd(raw,None)
+				if res == 0:
+					self.poll()
+				elif res == 1:
+					res = self.flush()
+					if res == -1:
+						raise SQLError(stmt,getError(raw))
+					if res == 1:
+						return
+					# if res == 0: continue since putCopyEnd overflowed and was dropped
+				else:
+					raise SQLError(stmt,getError(raw))
+		try:
+			putAll()
+		finally:
+			try:
+				putEnd()
+			finally:
+				with self.results(raw,stmt) as results:
+					self.result = oneresult(results)
 		return self.result
 	def flush(self,raw):
 		self.poll()
