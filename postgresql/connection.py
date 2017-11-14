@@ -2,13 +2,11 @@ from . import interface,arrayparser
 from itertools import count,islice
 import datetime
 import traceback
-import time
+import sys,time
 
 # TODO: don't hard code this
 # note: gevent can monkey patch this so greenlets work.
 import select
-
-import sys
 
 import threading
 
@@ -301,9 +299,11 @@ class Connection:
 			yield from self.derp_cancellable_results(raw, stmt, args)
 		except SQLError:
 			raise
+		except GeneratorExit as e:
+			raise
 		except:
 			self.safe.canceller.cancel()
-			print("Requested cancel...")
+			print("Requested cancel...",sys.exc_info())
 			self.poll(1000) # wait a bit to give it a chance?
 			raise
 #		finally:
@@ -508,7 +508,6 @@ class Connection:
 		lengths = makederp(ctypes.c_int,[len(arg) for arg in args])
 		fmt = makederp(ctypes.c_int,(0,)*len(args))
 		if self.verbose:
-			import sys,time
 			out = self.out if self.out else sys.stdout
 			out.write(str(time.time())+' '+stmt)
 			out.write(' '.join((':',)+tuple(map(repr,args)))+'\n')
@@ -605,7 +604,6 @@ class Connection:
 				else:
 					print("um... no copy?")
 					return
-			print("putallll")						
 #			print("Noprep done",stmt)
 			if result.statusId == E.COPY_OUT:
 				yield from self.copyTo(raw,stmt,args)
@@ -648,24 +646,23 @@ class Connection:
 			buf = bytearray(0x1000)
 			while True:
 				amt = source(buf)
-				if not amt: break
+				if not amt:
+					print("doned")
+					break
 				print("copying from",amt)
 				while True:
 					arr = ctypes.c_char * amt
 					res = interface.putCopyData(raw,arr.from_buffer(buf),amt)
 					if res == 0:
-						print("putwait")
 						self.poll()
 					elif res == 1:
-						print("goputend")
-						import sys
-						sys.stdout.flush()
-						return
+						print("putted")
+						break
 					else:
 						raise SQLError(stmt,getError(raw))
-		def putEnd():
+		def putEnd(error=None):
 			while True:
-				res = interface.putCopyEnd(raw,None)
+				res = interface.putCopyEnd(raw,error)
 				if res == 0:
 					self.poll()
 				elif res == 1:
@@ -679,13 +676,11 @@ class Connection:
 					raise SQLError(stmt,getError(raw))
 		try:
 			ret = putAll()
-			print("um",ret)
-		finally:
-			try:
-				print("putend?")
-				putEnd()
-			finally:
-				self.result = oneresult(self.results(raw,stmt,args))
+		except Exception as e:
+			putEnd(str(e).encode('utf-8'))
+		else:
+			putEnd()
+		self.result = oneresult(self.results(raw,stmt,args))
 		return self.result
 	def flush(self,raw):
 		self.poll()
