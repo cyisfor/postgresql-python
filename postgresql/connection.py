@@ -584,7 +584,7 @@ class Connection:
 			self.out.write(str(self.result))
 		return self.result
 	@notReentrant
-	def copy(self,stmt,source=None):
+	def copy(self,stmt,source=None, args=()):
 		@self.reconnecting
 		def gen():
 			nonlocal source
@@ -599,7 +599,7 @@ class Connection:
 				None,
 				None,
 				0))
-			for result in self.results(raw,stmt):
+			for result in self.results(raw,stmt,args):
 				if result.statusId in {E.COPY_OUT,E.COPY_IN}:
 					break
 				else:
@@ -607,7 +607,7 @@ class Connection:
 					return
 #			print("Noprep done",stmt)
 			if result.statusId == E.COPY_OUT:
-				yield from self.copyTo(stmt,raw)
+				yield from self.copyTo(raw,stmt,args)
 			else:
 				if hasattr(source,'read'):
 					if hasattr(source,'buffer'):
@@ -622,9 +622,9 @@ class Connection:
 							s = s.encode('utf-8')
 						buf[:] = s
 						return len(buf)
-				return self.copyFrom(raw,stmt,source)
+				return self.copyFrom(raw,stmt,args,source)
 		return gen
-	def copyTo(self,stmt,raw):
+	def copyTo(self,raw,stmt,args):
 		buf = ctypes.c_char_p(None)
 		while True:
 			code = interface.getCopyData(raw,ctypes.byref(buf),1)
@@ -639,10 +639,10 @@ class Connection:
 			else:
 				yield self.decode(ctypes.string_at(buf,code))
 		# copy TO returns 1 result before (endlessly) and 1 result after (w/ NULL)
-		self.result = oneresult(self.results(raw,stmt))
+		self.result = oneresult(self.results(raw,stmt,args))
 		return self.result
 	@pollout
-	def copyFrom(self,raw,stmt,source):
+	def copyFrom(self,raw,stmt,args,source):
 		buf = bytearray(0x1000)
 		def putAll():
 			while True:
@@ -665,7 +665,7 @@ class Connection:
 				if res == 0:
 					self.poll()
 				elif res == 1:
-					res = self.flush()
+					res = self.flush(raw)
 					if res == -1:
 						raise SQLError(stmt,getError(raw))
 					if res == 1:
@@ -679,7 +679,7 @@ class Connection:
 			try:
 				putEnd()
 			finally:
-				self.result = oneresult(self.results(raw,stmt))
+				self.result = oneresult(self.results(raw,stmt,args))
 		return self.result
 	def flush(self,raw):
 		self.poll()

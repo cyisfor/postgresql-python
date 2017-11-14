@@ -129,6 +129,8 @@ putCopyData = MF(lib.PQputCopyData,c_int,
 								 
 putCopyEnd = lib.PQputCopyEnd
 
+flush = lib.PQflush
+
 port = MF(lib.PQport,c_char_p,connection)
 name = MF(lib.PQdb,c_char_p,connection)
 
