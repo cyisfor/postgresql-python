@@ -671,6 +671,7 @@ class Connection:
 				while True:
 					arr = ctypes.c_char * amt
 					res = interface.putCopyData(raw,arr.from_buffer(buf),amt)
+					print("okaaaay...",raw)
 					if res == 0:
 						self.poll()
 					elif res == 1:
@@ -679,24 +680,32 @@ class Connection:
 					else:
 						raise SQLError(stmt,getError(raw))
 		def putEnd(error=None):
+			while self.flush(raw): pass
+			print("okaaaay...",interface.resultStatus(interface.next(raw)))
 			while True:
 				res = interface.putCopyEnd(raw,error)
 				if res == 0:
+					print("need to wait")
 					self.poll()
 				elif res == 1:
+					print("flushing...")
 					res = self.flush(raw)
 					if res == -1:
 						raise SQLError(stmt,getError(raw))
-					if res == 1:
+					if res == 0:
+						print("done")
 						return
+					print("need to put again",res)
 					# if res == 0: continue since putCopyEnd overflowed and was dropped
 				else:
 					raise SQLError(stmt,getError(raw))
 		try:
 			putAll()
 		except Exception as e:
+			print("beep")
 			putEnd(str(e).encode('utf-8'))
 		else:
+			print("meep")
 			putEnd()
 		self.result = oneresult(self.results(raw,stmt,args))
 		return self.result
