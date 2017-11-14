@@ -605,6 +605,7 @@ class Connection:
 				else:
 					print("um... no copy?")
 					return
+			print("putallll")						
 #			print("Noprep done",stmt)
 			if result.statusId == E.COPY_OUT:
 				yield from self.copyTo(raw,stmt,args)
@@ -643,12 +644,12 @@ class Connection:
 		return self.result
 	@pollout
 	def copyFrom(self,raw,stmt,args,source):
-		buf = bytearray(0x1000)
 		def putAll():
+			buf = bytearray(0x1000)
 			while True:
 				amt = source(buf)
 				if not amt: break
-				print(amt)
+				print("copying from",amt)
 				while True:
 					arr = ctypes.c_char * amt
 					res = interface.putCopyData(raw,arr.from_buffer(buf),amt)
@@ -656,6 +657,9 @@ class Connection:
 						print("putwait")
 						self.poll()
 					elif res == 1:
+						print("goputend")
+						import sys
+						sys.stdout.flush()
 						return
 					else:
 						raise SQLError(stmt,getError(raw))
@@ -674,9 +678,11 @@ class Connection:
 				else:
 					raise SQLError(stmt,getError(raw))
 		try:
-			putAll()
+			ret = putAll()
+			print("um",ret)
 		finally:
 			try:
+				print("putend?")
 				putEnd()
 			finally:
 				self.result = oneresult(self.results(raw,stmt,args))
