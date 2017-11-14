@@ -94,21 +94,21 @@ def oneresult(results):
 
 def notReentrant(f):
 	def wrapper(self,*a,**kw):
-		print("busy",id(self),a)
+		#print("busy",id(self),a)
 		assert not self.safe.busy, (self.safe.busyb, (f,a,kw))
 		self.safe.busy = True
 		self.safe.busyb = (f,a,kw)
 		try:
 			g = f(self,*a,**kw)
-			print(a)
-			print("ret",g)
+			#print(a)
+			#print("ret",g)
 			if(hasattr(g,'__next__')):
 				return tuple(g)
 			return g
 		finally:
 			self.safe.busy = False
 			self.safe.busyb = None
-			print("nabusy",id(self),a)
+			#print("nabusy",id(self),a)
 	return wrapper
 
 def parseNumber(result):
@@ -405,13 +405,14 @@ class Connection:
 			self.safe.canceller = Canceller(self)
 			self.setup(self.safe.raw)
 		return self.safe.raw
+
 	def establish_connection(self):
 		P = interface.PollingStatus
 		delay = 0.1
 		while True:
 			raw = interface.connect(self.params,1)
 			status = interface.status(raw)
-			if status = interface.ConnStatus.BAD:
+			if status == interface.ConnStatus.BAD:
 				print("bad connection...")
 				sleep(delay)
 				delay *= 1.5
@@ -424,13 +425,16 @@ class Connection:
 				res = interface.connectPoll(raw)
 				print("connecting...",res,interface.status(raw))
 				if res == P.OK:
+					self.safe.poll.modify(sock,select.POLLIN)
 					self.safe.raw = raw
+					# this is the only place to return.
 					return
 				elif res == P.READING:
 					self.safe.poll.modify(sock,select.POLLIN)
 				elif res == P.WRITING:
 					self.safe.poll.modify(sock,select.POLLOUT)
 				else:
+					self.safe.poll.modify(sock,select.POLLIN)
 					print("Polling status failed!")
 					sleep(1)
 					break
@@ -442,7 +446,7 @@ class Connection:
 						break
 					print("poll timeout on connecting...",res,delay)
 					delay *= 1.5
-					
+		raise RuntimeError("never get here!")
 
 	def reconnect(self):
 		boop = False
@@ -488,10 +492,7 @@ class Connection:
 	def encode(self,i):
 		return self.mogrify(i).encode('utf-8')
 	def execute(self,stmt,args=()):
-		try:
-			return self.executeRaw(self.connect(),stmt,args)
-		finally:
-			print("Execute done",stmt)
+		return self.executeRaw(self.connect(),stmt,args)
 	busy = False
 	@notReentrant
 	def executeRaw(self,raw,stmt,args=()):
