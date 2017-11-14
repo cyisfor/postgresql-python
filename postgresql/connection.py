@@ -295,21 +295,10 @@ class Connection:
 						b'server closed the connection unexpectedly'):
 					self.reconnect()
 				else: raise
-	def results(self,raw,stmt,args=()):
-		val = self.derp_results(raw,stmt,args)
-		class results:
-			def __enter__(self):
-				return val
-			def __exit__(self,*a):
-				n = 0
-				for result in val:
-					n += 1
-#				print("cleanup results",n)
-		return results()
-	def derp_results(self, raw, stmt, args):
+	def results(self, raw, stmt, args):
 #		print("start results",stmt)
 		try:
-			return iter(tuple(self.derp_cancellable_results(raw, stmt, args)))
+			yield from self.derp_cancellable_results(raw, stmt, args)
 		except SQLError:
 			raise
 		except:
@@ -317,9 +306,9 @@ class Connection:
 			print("Requested cancel...")
 			self.poll(1000) # wait a bit to give it a chance?
 			raise
-		finally:
+#		finally:
 #			print("end results",stmt)
-			interface.next(raw) # why an extra one?
+#			interface.next(raw) # why an extra one?
 	def derp_cancellable_results(self,raw,stmt,args=()):
 		consume(raw)
 		i=0
@@ -539,8 +528,7 @@ class Connection:
 						len(args),
 						types))
 					while True:
-						with self.results(raw,stmt,args) as results:
-							result = oneresult(results)
+						result = oneresult(self.results(raw,stmt,args))
 						if not result: break
 #						print(result)
 #					print("Prepare done",stmt)
@@ -570,8 +558,7 @@ class Connection:
 						lengths,
 						fmt,
 						0))
-					with self.results(raw,stmt,args) as results:
-						self.result = oneresult(results)
+					self.result = oneresult(self.results(raw,stmt,args))
 #					print("Noprep1 done",stmt)
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
@@ -586,8 +573,7 @@ class Connection:
 					lengths,
 					fmt,
 					0))
-				with self.results(raw,stmt,args) as results:
-					self.result = oneresult(results)
+				self.result = oneresult(self.results(raw,stmt,args))
 #				print("Query done",stmt)
 			except SQLError as e:
 				print("ummmm",e)
@@ -613,10 +599,9 @@ class Connection:
 				None,
 				None,
 				0))
-			with self.results(raw,stmt) as results:
-				for result in results:
-					if result.statusId in {E.COPY_OUT,E.COPY_IN}:
-						break
+			for result in self.results(raw,stmt):
+				if result.statusId in {E.COPY_OUT,E.COPY_IN}:
+					break
 				else:
 					print("um... no copy?")
 					return
@@ -654,8 +639,7 @@ class Connection:
 			else:
 				yield self.decode(ctypes.string_at(buf,code))
 		# copy TO returns 1 result before (endlessly) and 1 result after (w/ NULL)
-		with self.results(raw,stmt) as results:
-			self.result = oneresult(results)
+		self.result = oneresult(self.results(raw,stmt))
 		return self.result
 	@pollout
 	def copyFrom(self,raw,stmt,source):
@@ -695,8 +679,7 @@ class Connection:
 			try:
 				putEnd()
 			finally:
-				with self.results(raw,stmt) as results:
-					self.result = oneresult(results)
+				self.result = oneresult(self.results(raw,stmt))
 		return self.result
 	def flush(self,raw):
 		self.poll()
