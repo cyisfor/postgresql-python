@@ -28,7 +28,7 @@ print(result)
 		
 print('COPY TO')
 print("to a file, tuples updated:")
-print(c.execute("COPY derp (id,derp) TO '/tmp/derpderp'").tuplesUpdated)
+print(c.execute("COPY derp (id::int,derp::text) TO '/tmp/derpderp'").tuplesUpdated)
 for buf in c.copy("COPY derp (id,derp) TO STDOUT"):
     print("copy to result:",repr(buf))
 print("Also returns tuples updated in the final result:")
