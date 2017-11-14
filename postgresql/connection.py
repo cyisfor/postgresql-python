@@ -608,6 +608,19 @@ class Connection:
 			if result.statusId == E.COPY_OUT:
 				yield from self.copyTo(raw,stmt,args)
 			else:
+				oldsource = None
+				def bytessource(buf):
+					nonlocal oldsource
+					buf[:] = oldsource
+					oldsource = oldsource[len(buf):]
+				if isinstance(source,str):
+					oldsource = source.encode('utf-8')
+					source = bytessource
+				elif isinstance(source,(bytes,bytearray)):
+					source = bytessource
+				elif isinstance(source,memoryview):
+					oldsource = source.cast('B')
+					source = bytessource
 				if hasattr(source,'read'):
 					if hasattr(source,'buffer'):
 						source = source.buffer

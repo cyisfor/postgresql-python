@@ -15,8 +15,12 @@ print(result.types)
 for row in result:
     print(row)
 
+print('COPY FROM')
 from io import StringIO
-source = StringIO("23\t'fnord'\n7\tlucky ducky\n13\t'unlucky'\n")
+source = StringIO("""23	'fnord'
+7	'lucky ducky'
+13	'unlucky'
+""")
 result = tuple(c.copy("COPY derp (id,derp) FROM STDIN",source))
 print(result)
 
