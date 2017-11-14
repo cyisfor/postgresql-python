@@ -323,8 +323,11 @@ class Connection:
 					print("Waiting on",stmt,res)
 				consume(raw)
 			result = interface.next(raw)
-			if not result: return
+			if not result:
+				print("naresult")
+				return
 			result = Result(self,raw,result,stmt,args)
+			print("nextresult",result.statusId)
 			self.status = result.statusId
 			yield result
 	def setup(self,raw):
@@ -609,10 +612,11 @@ class Connection:
 				yield from self.copyTo(raw,stmt,args)
 			else:
 				oldsource = None
+				oldoff = 0
 				def bytessource(buf):
 					nonlocal oldsource
-					buf[:] = oldsource
-					oldsource = oldsource[len(buf):]
+					buf[:] = oldsource[oldoff:]
+					oldoff += max(len(buf),len(oldsource)-oldoff)
 				if isinstance(source,str):
 					oldsource = source.encode('utf-8')
 					source = bytessource
@@ -621,19 +625,20 @@ class Connection:
 				elif isinstance(source,memoryview):
 					oldsource = source.cast('B')
 					source = bytessource
-				if hasattr(source,'read'):
-					if hasattr(source,'buffer'):
-						source = source.buffer
-				if hasattr(source,'readinto'):
-					source = source.readinto
 				else:
-					oldsource = source
-					def source(buf):
-						s = oldsource.read(len(buf))
-						if hasattr(s,'encode'):
-							s = s.encode('utf-8')
-						buf[:] = s
-						return len(buf)
+					if hasattr(source,'read'):
+						if hasattr(source,'buffer'):
+							source = source.buffer
+					if hasattr(source,'readinto'):
+						source = source.readinto
+					else:
+						oldsource = source
+						def source(buf):
+							s = oldsource.read(len(buf))
+							if hasattr(s,'encode'):
+								s = s.encode('utf-8')
+							buf[:] = s
+							return len(buf)
 				return self.copyFrom(raw,stmt,args,source)
 		return gen
 	def copyTo(self,raw,stmt,args):
@@ -688,7 +693,7 @@ class Connection:
 				else:
 					raise SQLError(stmt,getError(raw))
 		try:
-			ret = putAll()
+			putAll()
 		except Exception as e:
 			putEnd(str(e).encode('utf-8'))
 		else:

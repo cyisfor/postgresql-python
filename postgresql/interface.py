@@ -102,7 +102,7 @@ escapeIdentifier = escapeThing(lib.PQescapeIdentifier)
 setErrorVerbosity = MF(lib.PQsetErrorVerbosity,Verbosity,
 											 connection,
 											 Verbosity)
-status = lib.PQstatus
+status = MF(lib.PQstatus,ConnStatus,connection)
 errorMessage = lib.PQresultErrorMessage
 errorMessage.restype = ctypes.c_char_p
 connectionErrorMessage = lib.PQerrorMessage
