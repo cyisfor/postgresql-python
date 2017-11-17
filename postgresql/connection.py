@@ -482,16 +482,22 @@ class Connection:
 			raise RuntimeError("Don't know how to mogrify type {}".format(type(i)))
 	def encode(self,i):
 		return self.mogrify(i).encode('utf-8')
-	def getresult(self,f):
-		try:
-			f()
-		finally:
+	def getresult(self,raw,stmt,args):
+		def deco(f):
 			try:
-				self.result = oneresult(self.results(raw,stmt,args))
-			except StopIteration:
-				self.result = None
+				return f()
+			finally:
+				try:
+					self.result = oneresult(self.results(raw,stmt,args))
+				except StopIteration:
+					self.result = None
+		return deco
 	def execute(self,stmt,args=()):
-		return self.executeRaw(self.connect(),stmt,args)
+		try:
+			return self.executeRaw(self.connect(),stmt,args)
+		except Exception as e:
+			print("uhm",type(e),e)
+			raise
 	busy = False
 	@notReentrant
 	def executeRaw(self,raw,stmt,args=()):
@@ -531,7 +537,7 @@ class Connection:
 				name = anonstatement()
 				def reallyprepare():
 #					print("Prepare",stmt)
-					@self.getresult
+					@self.getresult(raw,stmt,args)
 					def _():
 						self.checkOne(interface.send.prepare(
 							raw,
@@ -559,7 +565,7 @@ class Connection:
 							else: raise
 				else:
 #					print("Noprep1",stmt)
-					@self.getresult
+					@self.getresult(raw,stmt,args)
 					def _():
 						self.checkOne(interface.send.noprep.query(
 							raw,
@@ -575,7 +581,7 @@ class Connection:
 						self.executedBefore.add(hash(stmt))
 					return self.result
 			try:
-				@self.getresult
+				@self.getresult(raw,stmt,args)
 				def _():
 					#				print("Query",stmt)
 					self.checkOne(interface.send.query(
