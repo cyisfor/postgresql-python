@@ -399,7 +399,6 @@ class Connection:
 		return self.safe.raw
 
 	def establish_connection(self):
-		print("ESTABLISH CONNECTION")
 		P = interface.PollingStatus
 		delay = 0.1
 		while True:
@@ -528,7 +527,6 @@ class Connection:
 			out.flush()
 		@self.reconnecting
 		def _():
-			print("EXEcute",stmt)
 			name = self.prepareds.get(stmt)
 			if name is None:
 				types = None
