@@ -298,10 +298,12 @@ class Connection:
 		try:
 			yield from self.derp_cancellable_results(raw, stmt, args)
 		except SQLError:
+			while interface.next(raw): pass
 			raise
 		except GeneratorExit as e:
 			raise
 		except:
+			while interface.next(raw): pass
 			self.safe.canceller.cancel()
 			print("Requested cancel...",sys.exc_info())
 			self.poll(1000) # wait a bit to give it a chance?
@@ -493,11 +495,7 @@ class Connection:
 					self.result = None
 		return deco
 	def execute(self,stmt,args=()):
-		try:
-			return self.executeRaw(self.connect(),stmt,args)
-		except Exception as e:
-			print("uhm",type(e),e)
-			raise
+		return self.executeRaw(self.connect(),stmt,args)
 	busy = False
 	@notReentrant
 	def executeRaw(self,raw,stmt,args=()):
