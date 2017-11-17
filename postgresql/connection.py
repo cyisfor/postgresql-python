@@ -397,10 +397,12 @@ class Connection:
 		return self.safe.raw
 
 	def establish_connection(self):
+		print("ESTABLISH CONNECTION")
 		P = interface.PollingStatus
 		delay = 0.1
 		while True:
 			raw = interface.connect(self.params,1)
+			self.safe.raw = raw
 			status = interface.status(raw)
 			if status == interface.ConnStatus.BAD:
 				print("bad connection...")
@@ -416,7 +418,6 @@ class Connection:
 				print("connecting...",res,interface.status(raw))
 				if res == P.OK:
 					self.safe.poll.modify(sock,select.POLLIN)
-					self.safe.raw = raw
 					# this is the only place to return.
 					return
 				elif res == P.READING:
@@ -515,21 +516,23 @@ class Connection:
 			out.flush()
 		@self.reconnecting
 		def _():
+			print("EXEcute",stmt)
 			name = self.prepareds.get(stmt)
 			if name is None:
 				types = None
 				name = anonstatement()
 				def reallyprepare():
 #					print("Prepare",stmt)
-					self.checkOne(interface.send.prepare(
-						raw,
-						name.encode('utf-8'),
-						stmt.encode('utf-8'),
-						len(args),
-						types))
-					while True:
+					try:
+						self.checkOne(interface.send.prepare(
+							raw,
+							name.encode('utf-8'),
+							stmt.encode('utf-8'),
+							len(args),
+							types))
+					finally:
 						result = oneresult(self.results(raw,stmt,args))
-						if not result: break
+
 #						print(result)
 #					print("Prepare done",stmt)
 					# this is only the result of PREPARATION not executing it
@@ -549,16 +552,18 @@ class Connection:
 							else: raise
 				else:
 #					print("Noprep1",stmt)
-					self.checkOne(interface.send.noprep.query(
-						raw,
-						stmt.encode('utf-8'),
-						len(args) if args else 0,
-						types,
-						values,
-						lengths,
-						fmt,
-						0))
-					self.result = oneresult(self.results(raw,stmt,args))
+					try:
+						self.checkOne(interface.send.noprep.query(
+							raw,
+							stmt.encode('utf-8'),
+							len(args) if args else 0,
+							types,
+							values,
+							lengths,
+							fmt,
+							0))
+					finally:
+						self.result = oneresult(self.results(raw,stmt,args))
 #					print("Noprep1 done",stmt)
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
@@ -573,13 +578,15 @@ class Connection:
 					lengths,
 					fmt,
 					0))
-				self.result = oneresult(self.results(raw,stmt,args))
 #				print("Query done",stmt)
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
 				print(self.status)
 				raise
+			finally:
+				self.result = oneresult(self.results(raw,stmt,args))
+
 		if self.verbose:
 			self.out.write(str(self.result))
 		return self.result
