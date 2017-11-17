@@ -482,6 +482,14 @@ class Connection:
 			raise RuntimeError("Don't know how to mogrify type {}".format(type(i)))
 	def encode(self,i):
 		return self.mogrify(i).encode('utf-8')
+	def getresult(self,f):
+		try:
+			f()
+		finally:
+			try:
+				self.result = oneresult(self.results(raw,stmt,args))
+			except StopIteration:
+				self.result = None
 	def execute(self,stmt,args=()):
 		return self.executeRaw(self.connect(),stmt,args)
 	busy = False
@@ -523,15 +531,14 @@ class Connection:
 				name = anonstatement()
 				def reallyprepare():
 #					print("Prepare",stmt)
-					try:
+					@self.getresult
+					def _():
 						self.checkOne(interface.send.prepare(
 							raw,
 							name.encode('utf-8'),
 							stmt.encode('utf-8'),
 							len(args),
 							types))
-					finally:
-						result = oneresult(self.results(raw,stmt,args))
 
 #						print(result)
 #					print("Prepare done",stmt)
@@ -552,7 +559,8 @@ class Connection:
 							else: raise
 				else:
 #					print("Noprep1",stmt)
-					try:
+					@self.getresult
+					def _():
 						self.checkOne(interface.send.noprep.query(
 							raw,
 							stmt.encode('utf-8'),
@@ -562,30 +570,27 @@ class Connection:
 							lengths,
 							fmt,
 							0))
-					finally:
-						self.result = oneresult(self.results(raw,stmt,args))
 #					print("Noprep1 done",stmt)
 					if len(stmt) > 14: # don't bother preparing short statements ever
 						self.executedBefore.add(hash(stmt))
 					return self.result
 			try:
-#				print("Query",stmt)
-				self.checkOne(interface.send.query(
-					raw,
-					name.encode('utf-8'),
-					len(args),
-					values,
-					lengths,
-					fmt,
-					0))
-#				print("Query done",stmt)
+				@self.getresult
+				def _():
+					#				print("Query",stmt)
+					self.checkOne(interface.send.query(
+						raw,
+						name.encode('utf-8'),
+						len(args),
+						values,
+						lengths,
+						fmt,
+						0))
 			except SQLError as e:
 				print("ummmm",e)
 				print(dir(e))
 				print(self.status)
 				raise
-			finally:
-				self.result = oneresult(self.results(raw,stmt,args))
 
 		if self.verbose:
 			self.out.write(str(self.result))
