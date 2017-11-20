@@ -388,7 +388,8 @@ class Connection:
 	def connect(self):
 		need_setup = False
 		if self.safe.raw is None:
-			self.establish_connection()
+			self.safe.raw = self.establish_connection()
+			assert self.safe.raw is not None
 			need_setup = True
 		self.reconnect()
 		if need_setup:
@@ -401,13 +402,15 @@ class Connection:
 	def establish_connection(self):
 		P = interface.PollingStatus
 		delay = 0.1
+		raw = None
 		while True:
+			if raw is not None:
+				interface.finish(raw)
 			raw = interface.connect(self.params,1)
-			self.safe.raw = raw
 			status = interface.status(raw)
 			if status == interface.ConnStatus.BAD:
 				print("bad connection...")
-				sleep(delay)
+				time.sleep(delay)
 				delay *= 1.5
 				continue
 			self.safe.poll = select.poll()
@@ -420,15 +423,15 @@ class Connection:
 				if res == P.OK:
 					self.safe.poll.modify(sock,select.POLLIN)
 					# this is the only place to return.
-					return
+					return raw
 				elif res == P.READING:
 					self.safe.poll.modify(sock,select.POLLIN)
 				elif res == P.WRITING:
 					self.safe.poll.modify(sock,select.POLLOUT)
 				else:
 					self.safe.poll.modify(sock,select.POLLIN)
-					print("Polling status failed!")
-					sleep(1)
+					print("Polling status failed!",getError(raw))
+					time.sleep(1)
 					break
 				delay = 1
 				while True:
