@@ -324,15 +324,17 @@ class Connection:
 					res = self.poll(1000)
 					if len(res) > 0: break
 					assert len(res) == 0
-					s = ' '.join("Waiting on",stmt,res,time.time()-start)
+					s = ' '.join(str(s) for s in
+											 (("Waiting on",stmt)+tuple(args)+(round(time.time()-start,2),)))
 					if bs:
-						sys.stdout.write('\r'+'\b'*bs+'\r'+s)
+						sys.stdout.write('\b'*bs+' '*bs+'\r'+s)
 					else:
 						sys.stdout.write(s)
+					sys.stdout.flush()
 					bs = len(s)
 				consume(raw)
 			if bs is not None:
-				print('\r'+'\b'*bs+stmt,'done')
+				print('\b'*bs+' '*bs+'\r'+stmt,'done')
 			result = interface.next(raw)
 			if not result:
 				return

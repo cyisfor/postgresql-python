@@ -128,13 +128,16 @@ class Cursor:
 				pass
 			else:
 				raise
-		self.connection.safe.cursors.discard(self)
-		self.closed = True
 		if not self.connection.safe.cursors:
-			# you can't write to the database with cursors outstanding
-			# b/c too expensive to end the transaction with a hold cursor
-			# so if no more cursors, give waiting writes a chance to go
-			self.connection.retransaction()
+			print("why are we being closed in a different thread than the db object?")
+		else:
+			self.connection.safe.cursors.discard(self)
+			if not self.connection.safe.cursors:
+				# you can't write to the database with cursors outstanding
+				# b/c too expensive to end the transaction with a hold cursor
+				# so if no more cursors, give waiting writes a chance to go
+				self.connection.retransaction()
+		self.closed = True
 
 	def __enter__(self):
 		self.open()
