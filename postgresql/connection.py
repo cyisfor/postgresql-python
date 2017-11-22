@@ -227,6 +227,7 @@ class LocalConn(threading.local):
 	busy = False
 	poll = None
 	busyb = None
+	cursors = ()
 
 def pollout(f):
 	def wrapper(self,raw,*a,**kw):
@@ -327,14 +328,14 @@ class Connection:
 					s = ' '.join(str(s) for s in
 											 (("Waiting on",stmt)+tuple(args)+(round(time.time()-start,2),)))
 					if bs:
-						sys.stdout.write('\b'*bs+' '*bs+'\r'+s)
+						sys.stdout.write('\b'*bs+' '*bs+'\b'*bs+s)
 					else:
 						sys.stdout.write(s)
 					sys.stdout.flush()
 					bs = len(s)
 				consume(raw)
 			if bs is not None:
-				print('\b'*bs+' '*bs+'\r'+stmt,'done')
+				print('\b'*bs+' '*bs+'\b'*bs+stmt,'done')
 			result = interface.next(raw)
 			if not result:
 				return
