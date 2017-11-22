@@ -317,13 +317,22 @@ class Connection:
 		oldresult = None
 		while True:
 			i += 1
+			bs = None
+			start = time.time()
 			while interface.isBusy(raw):
 				while True:
 					res = self.poll(1000)
 					if len(res) > 0: break
 					assert len(res) == 0
-					print("Waiting on",stmt,res)
+					s = ' '.join("Waiting on",stmt,res,time.time()-start)
+					if bs:
+						sys.stdout.write('\r'+'\b'*bs+'\r'+s)
+					else:
+						sys.stdout.write(s)
+					bs = len(s)
 				consume(raw)
+			if bs is not None:
+				print('\r'+'\b'*bs+stmt,'done')
 			result = interface.next(raw)
 			if not result:
 				return
