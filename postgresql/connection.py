@@ -171,6 +171,8 @@ class Result(list):
 						self.status,
 						error)))
 					sys.stderr.flush()
+				if conn.inTransaction:
+					conn.rollback()
 				raise SQLError(stmt,error)
 			else:
 				self.error = error
