@@ -2,7 +2,7 @@ from . import interface,arrayparser
 from itertools import count,islice
 import datetime
 import traceback
-import sys,time
+import sys,os,time
 
 # TODO: don't hard code this
 # note: gevent can monkey patch this so greenlets work.
@@ -299,6 +299,14 @@ class Connection:
 		if 'params' in params:
 			params.update(params['params'])
 			del params['params']
+		if not 'fallback_application_name' in params:
+			appname = str(os.getpid()) + ":"
+			script = sys.argv[0]
+			if len(script) + len(appname) >= 64:
+				appname += script[64-len(appname):]
+			else:
+				appname += script
+			params['fallback_application_name'] = appname
 		self._ctypessuck = (" ".join(n+"="+repr(v) for n,v in params.items())).encode("utf-8")
 		self.params = ctypes.create_string_buffer(self._ctypessuck)
 		self.safe = LocalConn()
