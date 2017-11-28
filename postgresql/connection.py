@@ -268,6 +268,25 @@ class Canceller:
 		if ret == 0:
 			raise SQLError("Could not cancel: "+s)
 
+
+# python sucks
+# https://stackoverflow.com/a/16767723/3833643
+def escapable(f):
+	class Escape(RuntimeError):
+		def __init__(self,isbreak):
+			self.isbreak = isbreak
+	class Escaper:
+		def ebreak(self):
+			raise Escape(True)
+		def econtinue(self):
+			raise Escape(False)
+	while True:
+		try:
+			return f(Escaper())			
+		except Escape as e:
+			if e.isbreak:
+				break
+
 class Connection:
 	inTransaction = False
 	savePoint = None
@@ -417,7 +436,9 @@ class Connection:
 		P = interface.PollingStatus
 		delay = 0.1
 		raw = None
-		while True:
+		@escapable
+		def _(reconn):
+			nonlocal raw
 			if raw is not None:
 				interface.finish(raw)
 			raw = interface.connect(self.params,1)
@@ -426,7 +447,7 @@ class Connection:
 				print("bad connection...")
 				time.sleep(delay)
 				delay *= 1.5
-				continue
+				reconn.econtinue()
 			self.safe.poll = select.poll()
 			sock = interface.socket(raw)
 			self.safe.poll.register(sock, select.POLLIN)
@@ -436,8 +457,7 @@ class Connection:
 				print("connecting...",res,interface.status(raw))
 				if res == P.OK:
 					self.safe.poll.modify(sock,select.POLLIN)
-					# this is the only place to return.
-					return raw
+					reconn.ebreak()
 				elif res == P.READING:
 					self.safe.poll.modify(sock,select.POLLIN)
 				elif res == P.WRITING:
@@ -446,7 +466,7 @@ class Connection:
 					self.safe.poll.modify(sock,select.POLLIN)
 					print("Polling status failed!",getError(raw))
 					time.sleep(1)
-					break
+					reconn.econtinue()
 				delay = 1
 				while True:
 					# SIGH
@@ -455,6 +475,7 @@ class Connection:
 						break
 					print("poll timeout on connecting...",res,delay)
 					delay *= 1.5
+		return raw
 		raise RuntimeError("never get here!")
 
 	def reconnect(self):
