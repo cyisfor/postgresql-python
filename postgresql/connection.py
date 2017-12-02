@@ -288,7 +288,7 @@ def escapable(f):
 				break
 
 # ugh, why is this happening...
-oneconn = Local()
+oneconn = threading.local()
 oneconn.connected = False
 connected = False
 
@@ -302,8 +302,8 @@ class Connection:
 			raise SQLError("derp",getError(self.safe.raw))
 	def __init__(self,**params):
 		global connected
-		assert(!oneconn.connected);
-		assert(!connected);
+		assert(not oneconn.connected);
+		assert(not connected);
 		oneconn.connected = True
 		connected = True
 		if 'params' in params:
@@ -452,11 +452,11 @@ class Connection:
 
 	def establish_connection(self):
 		P = interface.PollingStatus
-		delay = 0.1
+		delay = 1
 		raw = None
 		@escapable
 		def _(reconn):
-			nonlocal raw
+			nonlocal raw, delay
 			if raw is not None:
 				interface.finish(raw)
 			raw = interface.connect(self.params,1)
@@ -469,10 +469,8 @@ class Connection:
 			self.safe.poll = select.poll()
 			sock = interface.socket(raw)
 			self.safe.poll.register(sock, select.POLLIN)
-			delay = 0.1
 			while True:
 				res = interface.connectPoll(raw)
-				print("connecting...",res,interface.status(raw))
 				if res == P.OK:
 					self.safe.poll.modify(sock,select.POLLIN)
 					reconn.ebreak()
@@ -482,8 +480,9 @@ class Connection:
 					self.safe.poll.modify(sock,select.POLLOUT)
 				else:
 					self.safe.poll.modify(sock,select.POLLIN)
-					print("Polling status failed!",getError(raw))
-					time.sleep(1)
+					print("Polling status failed!",id(self),getError(raw))
+					time.sleep(delay)
+					delay *= 2;
 					reconn.econtinue()
 				delay = 1
 				while True:
@@ -493,6 +492,7 @@ class Connection:
 						break
 					print("poll timeout on connecting...",res,delay)
 					delay *= 1.5
+				delay = 1
 		return raw
 		raise RuntimeError("never get here!")
 
