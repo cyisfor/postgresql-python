@@ -287,6 +287,11 @@ def escapable(f):
 			if e.isbreak:
 				break
 
+# ugh, why is this happening...
+oneconn = Local()
+oneconn.connected = False
+connected = False
+
 class Connection:
 	inTransaction = False
 	savePoint = None
@@ -296,6 +301,11 @@ class Connection:
 		if i != 1:
 			raise SQLError("derp",getError(self.safe.raw))
 	def __init__(self,**params):
+		global connected
+		assert(!oneconn.connected);
+		assert(!connected);
+		oneconn.connected = True
+		connected = True
 		if 'params' in params:
 			params.update(params['params'])
 			del params['params']
