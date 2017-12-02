@@ -37,12 +37,14 @@ class Connection(connection.Connection):
 
 	def rollback(self):
 #		print("ROLLBACK")
+		self.drain_results()
 		self.close_cursors()
 		self.execute("ROLLBACK")
 		self.inTransaction = False
 
 	def commit(self):
 #		print("COMMIT")
+#		self.drain_results()
 		self.close_cursors()
 		self.execute("COMMIT")
 		self.inTransaction = False
