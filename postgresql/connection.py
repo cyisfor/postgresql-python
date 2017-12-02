@@ -349,16 +349,18 @@ class Connection:
 			self.poll(1000) # wait a bit to give it a chance?
 			raise
 	draining = False
-	def drainer(self,f):
-		def wrapper(*a,**kw):
+	def drainer(f):
+		def wrapper(self, *a,**kw):
 			self.draining = True
 			try:
-				return f(*a,**kw)
+				yield from f(self,*a,**kw)
 			finally:
 				self.draining = False
-	def drain_results(self,raw):
+		return wrapper
+	def drain_results(self):
 		# so we can rollback, I guess?
 		if not self.draining: return
+		raw = self.safe.raw
 		self.draining = False
 		count = 0
 		while interface.isBusy(raw):
@@ -371,7 +373,7 @@ class Connection:
 			if not result:
 				return count
 			count += 1
-	@self.drainer
+	@drainer
 	def derp_cancellable_results(self,raw,stmt,args=()):
 		consume(raw)
 		i=0
