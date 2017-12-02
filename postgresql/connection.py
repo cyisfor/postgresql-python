@@ -348,9 +348,30 @@ class Connection:
 			print("Requested cancel...",sys.exc_info())
 			self.poll(1000) # wait a bit to give it a chance?
 			raise
-#		finally:
-#			print("end results",stmt)
-#			interface.next(raw) # why an extra one?
+	draining = False
+	def drainer(self,f):
+		def wrapper(*a,**kw):
+			self.draining = True
+			try:
+				return f(*a,**kw)
+			finally:
+				self.draining = False
+	def drain_results(self,raw):
+		# so we can rollback, I guess?
+		if not self.draining: return
+		self.draining = False
+		count = 0
+		while interface.isBusy(raw):
+			while True:
+				res = self.poll(1000)
+				if len(res) > 0: break
+				assert len(res) == 0
+			consume(raw)
+			result = interface.next(raw)
+			if not result:
+				return count
+			count += 1
+	@self.drainer
 	def derp_cancellable_results(self,raw,stmt,args=()):
 		consume(raw)
 		i=0
