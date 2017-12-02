@@ -8,7 +8,11 @@ import sys,os,time
 # note: gevent can monkey patch this so greenlets work.
 import select
 
-import threading
+try:
+	from gevent.monkey import get_original
+	local = get_original('threading','local')
+except ImportError:
+	from threading import local
 
 class Prepared(str): pass
 
@@ -223,7 +227,7 @@ def makederp(typ,args):
 	val = typ(*args)
 	return val
 
-class LocalConn(threading.local):
+class LocalConn(local):
 	raw = None
 	canceller = None
 	busy = False
@@ -288,7 +292,7 @@ def escapable(f):
 				break
 
 # ugh, why is this happening...
-oneconn = threading.local()
+oneconn = local()
 oneconn.connected = False
 connected = False
 
