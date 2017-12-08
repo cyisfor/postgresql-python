@@ -341,6 +341,8 @@ class Connection:
 #		print("start results",stmt)
 		try:
 			yield from self.derp_cancellable_results(raw, stmt, args)
+		except TypeError:
+			return ()
 		except SQLError:
 			while interface.next(raw): pass
 			raise
