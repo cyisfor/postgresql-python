@@ -158,6 +158,7 @@ class Result(list):
 		self.decode = conn.decode
 		self.demogrify = conn.demogrify
 		self.statusId = interface.resultStatus(raw)
+		self.cmdStatus = interface.cmdStatus(raw)
 		if self.statusId in {E.COPY_OUT,E.COPY_IN}:
 			interface.freeResult(raw)
 			return

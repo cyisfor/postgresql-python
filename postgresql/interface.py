@@ -85,6 +85,7 @@ class Notify(ctypes.Structure):
 notifies = MF(lib.PQnotifies,POINTER(Notify),connection)
 
 resultStatus = MF(lib.PQresultStatus,ExecStatus,result)
+cmdStatus = MF(lib.PQcmdStatus,c_char_p,result)
 tuplesUpdated = MF(lib.PQcmdTuples,c_char_p,result)
 resStatus = MF(lib.PQresStatus,c_char_p,ExecStatus)
 

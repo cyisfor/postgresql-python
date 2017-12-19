@@ -118,8 +118,6 @@ class Cursor:
 														self.sql,
 														self.args)
 		self.connection.safe.cursors.add(self)
-		if self.offset:
-			self.connection.execute("MOVE ABSOLUTE " +str(self.offset)+" FROM " + self.name)
 	def close(self):
 		if self.closed: return
 #		print("CLOSE",self.name,self.connection.raw)
@@ -162,10 +160,14 @@ class Cursor:
 		return False
 	def move(self,start):
 		if start == self.offset: return
-		self.open()
-		diff = start - self.offset
-		self.connection.execute("MOVE RELATIVE " +str(diff)+" FROM " + self.name)
 		self.offset = start
+		print(start)
+		self.open()
+		if start:
+			print("MOVEA",self.connection.execute("MOVE ABSOLUTE " +str(self.offset)+" FROM " + self.name).cmdStatus)
+		#diff = start - self.offset
+		#print(self.connection.execute("MOVE RELATIVE " +str(diff)+" FROM " + self.name).cmdStatus)
+		#self.offset = start
 	def fetch(self,limit):
 		self.open()
 		self.offset += limit
