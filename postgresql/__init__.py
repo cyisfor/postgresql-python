@@ -159,12 +159,13 @@ class Cursor:
 			self.args = args
 		return False
 	def move(self,start):
+		if self.connection.verbose:
+			self.connection.out.write("MOVE {}\n".format(start))
 		if start == self.offset: return
 		self.offset = start
 		print(start)
 		self.open()
-		if start:
-			print("MOVEA",self.connection.execute("MOVE ABSOLUTE " +str(self.offset)+" FROM " + self.name).cmdStatus)
+		print("MOVEA",self.connection.execute("MOVE ABSOLUTE " +str(self.offset)+" FROM " + self.name).cmdStatus)
 		#diff = start - self.offset
 		#print(self.connection.execute("MOVE RELATIVE " +str(diff)+" FROM " + self.name).cmdStatus)
 		#self.offset = start

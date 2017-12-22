@@ -680,8 +680,8 @@ class Connection:
 				print(self.status)
 				raise
 
-		if self.verbose:
-			self.out.write(str(self.result))
+#		if self.verbose:
+#			self.out.write(str(self.result))
 		return self.result
 	@notReentrant
 	def copy(self,stmt,source=None, args=()):
