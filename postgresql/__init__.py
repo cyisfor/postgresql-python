@@ -165,7 +165,7 @@ class Cursor:
 		self.offset = start
 		print(start)
 		self.open()
-		print("MOVEA",self.connection.execute("MOVE ABSOLUTE " +str(self.offset)+" FROM " + self.name).cmdStatus)
+		print("MOVEA",self.offset, self.connection.execute("MOVE ABSOLUTE " +str(self.offset)+" FROM " + self.name).cmdStatus)
 		#diff = start - self.offset
 		#print(self.connection.execute("MOVE RELATIVE " +str(diff)+" FROM " + self.name).cmdStatus)
 		#self.offset = start
