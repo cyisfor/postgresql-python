@@ -578,12 +578,13 @@ class Connection:
 	def getresult(self,raw,stmt,args):
 		def deco(f):
 			try:
-				return f()
-			finally:
 				try:
+					return f()
+				finally:
 					self.result = oneresult(self.results,raw,stmt,args)
-				except StopIteration:
-					self.result = None
+			except SQLError:
+				self.rollback()
+				raise
 		return deco
 	def execute(self,stmt,args=(),handle=None):
 		return self.executeRaw(self.connect(),stmt,args,handle)
