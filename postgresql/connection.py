@@ -86,12 +86,15 @@ def parseDate(result):
 	except IndexError: pass
 	return result
 
-def oneresult(results):
-	result = next(results)
-	try:
-		res = next(results)
-		print("warning: not just one result",res.statusId)
-	except StopIteration: pass
+def oneresult(results,raw,stmt,args):
+	result = None
+	def handle(row):
+		nonlocal result
+		if result is None:
+			result = row
+		else:
+			print("warining: not just one result",result.statusId)
+	results(raw,stmt,args,handle)
 	return result
 
 def notReentrant(f):
@@ -338,10 +341,10 @@ class Connection:
 						b'server closed the connection unexpectedly'):
 					self.reconnect()
 				else: raise
-	def results(self, raw, stmt, args):
+	def results(self, raw, stmt, args, handle=None):
 #		print("start results",stmt)
 		try:
-			yield from self.derp_cancellable_results(raw, stmt, args)
+			self.derp_cancellable_results(raw, stmt, args, handle):
 		except TypeError:
 			return ()
 		except SQLError:
@@ -360,7 +363,7 @@ class Connection:
 		def wrapper(self, *a,**kw):
 			self.draining = True
 			try:
-				yield from f(self,*a,**kw)
+				return f(self,*a,**kw)
 			finally:
 				self.draining = False
 		return wrapper
@@ -381,7 +384,7 @@ class Connection:
 				return count
 			count += 1
 	@drainer
-	def derp_cancellable_results(self,raw,stmt,args=()):
+	def derp_cancellable_results(self,raw,stmt,args=(),handle=None):
 		consume(raw)
 		i=0
 		oldresult = None
@@ -410,7 +413,7 @@ class Connection:
 				return
 			result = Result(self,raw,result,stmt,args)
 			self.status = result.statusId
-			yield result
+			handle(result)
 	def setup(self,raw):
 		if self.specialDecoders: return
 		self.specialDecoders = {}
@@ -529,19 +532,22 @@ class Connection:
 	def reconnect(self):
 		boop = False
 		raw = self.safe.raw
-		stat = interface.status(raw)
 		C = interface.ConnStatus
-		if stat != C.OK:
+		def resetifbad():
+			print("connection bad?",interface.status(raw),getError(raw))
+			import time
+			time.sleep(1)
+			interface.reset(raw)
+			print(interface.status(raw),"reset")
+		while True:
+			stat = interface.status(raw)
+			if stat in {C.OK,C.MADE}: break
 			if stat == C.BAD:
 				boop = True
-				print("connection bad?",interface.status(raw),getError(raw))
-				import time
-				time.sleep(1)
-				interface.reset(raw)
-			while not interface.status(raw) not in {C.OK,C.MADE}:
-				self.poll(1000)
-				consume(raw)
-				interface.connectPoll(raw)
+				resetifbad()
+			self.poll(1000)
+			consume(raw)
+			interface.connectPoll(raw)
 		if boop:
 			self.executedBefore = set()
 			self.prepareds = dict()
@@ -575,15 +581,15 @@ class Connection:
 				return f()
 			finally:
 				try:
-					self.result = oneresult(self.results(raw,stmt,args))
+					self.result = oneresult(self.results,raw,stmt,args))
 				except StopIteration:
 					self.result = None
 		return deco
-	def execute(self,stmt,args=()):
-		return self.executeRaw(self.connect(),stmt,args)
+	def execute(self,stmt,args=(),handle=None):
+		return self.executeRaw(self.connect(),stmt,args,handle)
 	busy = False
 	@notReentrant
-	def executeRaw(self,raw,stmt,args=()):
+	def executeRaw(self,raw,stmt,args=(),handle=None):
 		if isinstance(args,dict):
 			# just figured out a neat trick to let %(named)s parameters
 			keys = args.keys()
@@ -707,7 +713,7 @@ class Connection:
 					return
 #			print("Noprep done",stmt)
 			if result.statusId == E.COPY_OUT:
-				yield from self.copyTo(raw,stmt,args)
+				self.copyTo(raw,stmt,args)
 			else:
 				oldsource = None
 				oldoff = 0
@@ -739,7 +745,7 @@ class Connection:
 							return len(buf)
 				return self.copyFrom(raw,stmt,args,source)
 		return gen
-	def copyTo(self,raw,stmt,args):
+	def copyTo(self,raw,stmt,args,handle=None):
 		buf = ctypes.c_char_p(None)
 		while True:
 			code = interface.getCopyData(raw,ctypes.byref(buf),1)
@@ -760,9 +766,9 @@ class Connection:
 				# you could still manually demogrify them, if you knew what their OIDs were...
 				# TODO: make connection.copy() take a table name, and fields
 				# then introspect the OIDs of those fields using info/pg_* system tables
-				yield row
+				handle(row)
 		# copy TO returns 1 result before (endlessly) and 1 result after (w/ NULL)
-		self.result = oneresult(self.results(raw,stmt,args))
+		self.result = oneresult(self.results,raw,stmt,args))
 		return self.result
 	@pollout
 	def copyFrom(self,raw,stmt,args,source):
@@ -803,7 +809,7 @@ class Connection:
 			putEnd(str(e).encode('utf-8'))
 		else:
 			putEnd()
-		self.result = oneresult(self.results(raw,stmt,args))
+		self.result = oneresult(self.results,raw,stmt,args))
 		return self.result
 	def flush(self,raw):
 		self.poll()
