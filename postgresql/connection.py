@@ -179,8 +179,8 @@ class Result(list):
 						self.status,
 						error)))
 					sys.stderr.flush()
-				if conn.inTransaction:
-					conn.rollback()
+				# cannot rollback here, since we might be getting more results
+				# so can't send more queries I guess?
 				raise SQLError(stmt,error)
 			else:
 				self.error = error
@@ -344,7 +344,7 @@ class Connection:
 	def results(self, raw, stmt, args, handle=None):
 #		print("start results",stmt)
 		try:
-			self.derp_cancellable_results(raw, stmt, args, handle):
+			return self.derp_cancellable_results(raw, stmt, args, handle)
 		except TypeError:
 			return ()
 		except SQLError:
@@ -581,7 +581,7 @@ class Connection:
 				return f()
 			finally:
 				try:
-					self.result = oneresult(self.results,raw,stmt,args))
+					self.result = oneresult(self.results,raw,stmt,args)
 				except StopIteration:
 					self.result = None
 		return deco
@@ -768,7 +768,7 @@ class Connection:
 				# then introspect the OIDs of those fields using info/pg_* system tables
 				handle(row)
 		# copy TO returns 1 result before (endlessly) and 1 result after (w/ NULL)
-		self.result = oneresult(self.results,raw,stmt,args))
+		self.result = oneresult(self.results,raw,stmt,args)
 		return self.result
 	@pollout
 	def copyFrom(self,raw,stmt,args,source):
@@ -809,7 +809,7 @@ class Connection:
 			putEnd(str(e).encode('utf-8'))
 		else:
 			putEnd()
-		self.result = oneresult(self.results,raw,stmt,args))
+		self.result = oneresult(self.results,raw,stmt,args)
 		return self.result
 	def flush(self,raw):
 		self.poll()
