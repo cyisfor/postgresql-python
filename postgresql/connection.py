@@ -576,18 +576,19 @@ class Connection:
 	def encode(self,i):
 		return self.mogrify(i).encode('utf-8')
 	def getresult(self,raw,stmt,args):
+		# still can't rollback, until we're out of executeRaw
 		def deco(f):
 			try:
-				try:
-					return f()
-				finally:
-					self.result = oneresult(self.results,raw,stmt,args)
-			except SQLError:
-				self.rollback()
-				raise
+				return f()
+			finally:
+				self.result = oneresult(self.results,raw,stmt,args)
 		return deco
 	def execute(self,stmt,args=(),handle=None):
-		return self.executeRaw(self.connect(),stmt,args,handle)
+		try:
+			return self.executeRaw(self.connect(),stmt,args,handle)
+		except SQLError:
+			self.rollback()
+			raise
 	busy = False
 	@notReentrant
 	def executeRaw(self,raw,stmt,args=(),handle=None):
